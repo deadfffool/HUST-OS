@@ -37,6 +37,16 @@ typedef struct elf_prog_header_t {
   uint64 align;  /* Segment alignment */
 } elf_prog_header;
 
+// elf symbol table structure
+typedef struct elf_sym_t {
+  uint32   st_name;
+  uint8    st_info;      /* the type of symbol */
+  uint8    st_other;
+  uint16   st_shndx;
+  uint64   st_value;
+  uint64   st_size;
+} elf_sym;
+
 #define ELF_MAGIC 0x464C457FU  // "\x7FELF" in little endian
 #define ELF_PROG_LOAD 1
 

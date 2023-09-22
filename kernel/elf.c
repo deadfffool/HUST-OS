@@ -8,6 +8,10 @@
 #include "riscv.h"
 #include "spike_interface/spike_utils.h"
 
+char shstrtab_arr[SHSTRTAB_ARR_MAX];
+int func_num = 0;
+elf_sym symbols_arr[MAX_DEPTH + OTHER_FUNC_NUM];
+
 typedef struct elf_info_t {
   spike_file_t *f;
   process *p;
@@ -137,4 +141,15 @@ void load_bincode_from_host_elf(process *p) {
   spike_file_close( info.f );
 
   sprint("Application program entry point (virtual address): 0x%lx\n", p->trapframe->epc);
+}
+
+void backtrace(uint64 addr, uint64 depth) {
+    while(depth--)
+      for (int i = 0; i < func_num; i++)
+        if(symbols_arr[i].st_value == addr){
+          sprint("%s\n", shstrtab_arr + symbols_arr[i].st_name);
+          if (strcmp(shstrtab_arr + symbols_arr[i].st_name, "main") == 0) return;
+          addr += symbols_arr[i].st_size;
+          break;
+        }
 }
