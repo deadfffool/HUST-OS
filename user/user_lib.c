@@ -5,8 +5,6 @@
  * and user library more straightforward.
  */
 
-
-
 #include "user_lib.h"
 #include "util/types.h"
 #include "util/snprintf.h"
