@@ -595,7 +595,26 @@ int rfs_link(struct vinode *parent, struct dentry *sub_dentry, struct vinode *li
   //    rfs_add_direntry here.
   // 3) persistent the changes to disk. you can use rfs_write_back_vinode here.
   //
-  panic("You need to implement the code for creating a hard link in lab4_3.\n" );
+  const char *link_name = sub_dentry->name;
+
+  // 增加现有文件的链接计数
+  link_node->nlinks++;
+
+  // 更新并写回链接节点的链接计数到磁盘
+  struct rfs_device *rdev = rfs_device_list[parent->sb->s_dev->dev_id];
+  struct rfs_dinode *link_dinode = rfs_read_dinode(rdev, link_node->inum);
+  link_dinode->nlinks = link_node->nlinks;
+  rfs_write_dinode(rdev, link_dinode, link_node->inum);
+  free_page(link_dinode);
+
+  // 将新链接文件添加到父目录
+  int result = rfs_add_direntry(parent, link_name, link_node->inum);
+  if (result == -1) {
+    sprint("rfs_link: rfs_add_direntry failed");
+    return -1;
+  }
+
+  return 0;
 }
 
 //
