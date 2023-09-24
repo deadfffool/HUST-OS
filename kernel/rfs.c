@@ -494,7 +494,11 @@ struct vinode *rfs_create(struct vinode *parent, struct dentry *sub_dentry) {
   // nlinks, i.e., the number of links.
   // blocks, i.e., its block count.
   // Note: DO NOT DELETE CODE BELOW PANIC.
-  panic("You need to implement the code of populating a disk inode in lab4_1.\n" );
+  free_dinode->size = 0; // Set the size to 0 for a new file.
+  free_dinode->type = R_FILE; // Set the type to the appropriate RFS file type (e.g., R_FILE).
+  free_dinode->nlinks = 1; // Set the number of links to 1 for a new file.
+  free_dinode->blocks = 0; // Set the block count to 0 for a new file.
+
 
   // DO NOT REMOVE ANY CODE BELOW.
   // allocate a free block for the file
@@ -787,7 +791,12 @@ int rfs_readdir(struct vinode *dir_vinode, struct dir *dir, int *offset) {
   // the method of returning is to popular proper members of "dir", more specifically,
   // dir->name and dir->inum.
   // note: DO NOT DELETE CODE BELOW PANIC.
-  panic("You need to implement the code for reading a directory entry of rfs in lab4_2.\n" );
+  // Copy the name from the directory entry to the "dir" structure.
+  strcpy(dir->name, p_direntry->name);
+  dir->name[RFS_MAX_FILE_NAME_LEN - 1] = '\0'; // Ensure null-terminated string.
+
+  // Set the inode number in the "dir" structure.
+  dir->inum = p_direntry->inum;
 
   // DO NOT DELETE CODE BELOW.
   (*offset)++;
