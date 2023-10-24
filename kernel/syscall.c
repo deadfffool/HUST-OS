@@ -13,6 +13,9 @@
 #include "elf.h"
 #include "spike_interface/spike_utils.h"
 
+extern Symbols symbols[64];
+extern int count;
+
 //
 // implement the SYS_user_print syscall
 //
@@ -32,10 +35,24 @@ ssize_t sys_user_exit(uint64 code) {
 }
 
 ssize_t sys_user_backtrace(uint64 n){
-  uint64 trace_fp = current->trapframe->regs.s0;
-  uint64 trace_ra = current->trapframe->regs.ra;
-  sprint("0x%lx\n",trace_fp);
-  sprint("0x%lx\n",trace_ra);
+  uint64 current_fp =current->trapframe->regs.s0+16;
+  int i = 0;
+  for (i;i<n;i++)
+  {
+    // sprint("fp%d:0x%x\n",i,*(uint64*)(current_fp-8)); 
+    uint64 code = *(uint64*)(current_fp-8);
+    int j;
+    for(j=0;j<count-1;j++){
+      if (symbols[j+1].off<code && code<symbols[j].off)
+        sprint("%s\n",symbols[j+1].name);
+    }
+    current_fp = *(uint64*)(current_fp-16);  
+  }
+
+  // int i = 0;
+  // for(i=0;i<count;i++)
+  //   sprint("0x%lx    %s\n",symbols[i].off,symbols[i].name);
+
   return 0;
 }
 
