@@ -32,8 +32,10 @@ ssize_t sys_user_exit(uint64 code) {
 }
 
 ssize_t sys_user_backtrace(uint64 n){
-  uint64 ra = current->trapframe->regs.s0-14;
-  backtrace(ra,n);
+  uint64 trace_fp = current->trapframe->regs.s0;
+  uint64 trace_ra = current->trapframe->regs.ra;
+  sprint("0x%lx\n",trace_fp);
+  sprint("0x%lx\n",trace_ra);
   return 0;
 }
 

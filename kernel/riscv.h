@@ -155,7 +155,7 @@ typedef struct riscv_regs_t {
   /*  32 */ uint64 t0;
   /*  40 */ uint64 t1;
   /*  48 */ uint64 t2;
-  /*  56 */ uint64 s0;
+  /*  56 */ uint64 s0;  //(fp)
   /*  64 */ uint64 s1;
   /*  72 */ uint64 a0;
   /*  80 */ uint64 a1;

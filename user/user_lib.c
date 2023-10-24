@@ -52,5 +52,5 @@ int exit(int code) {
 
 int print_backtrace(int n)
 {
-  return do_user_call(SYS_user_exit, n, 0, 0, 0, 0, 0, 0);
+  return do_user_call(SYS_user_backtrace, n, 0, 0, 0, 0, 0, 0);
 }
