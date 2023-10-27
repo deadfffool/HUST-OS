@@ -76,3 +76,8 @@ int fork() {
 void yield() {
   do_user_call(SYS_user_yield, 0, 0, 0, 0, 0, 0, 0);
 }
+
+void wait(uint64 a)
+{
+  do_user_call(SYS_user_wait,a,0,0,0,0,0,0);
+}

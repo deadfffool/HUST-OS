@@ -242,6 +242,20 @@ int do_fork( process* parent)
         child->mapped_info[child->total_mapped_region].seg_type = CODE_SEGMENT;
         child->total_mapped_region++;
         break;
+      case DATA_SEGMENT:
+        for(int j =0;j< parent->mapped_info[i].npages;j++)
+        {
+          // alloc and copy
+          uint64 addr = lookup_pa(parent->pagetable, parent->mapped_info[i].va+j*PGSIZE);
+          char *new = alloc_page();
+          memcpy(new, (void *)addr, PGSIZE);
+          map_pages(child->pagetable, parent->mapped_info[i].va+j*PGSIZE, PGSIZE,(uint64)new, prot_to_type(PROT_WRITE | PROT_READ, 1));
+        }
+        child->mapped_info[i].npages = parent->mapped_info[i].npages;
+        child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
+        child->mapped_info[child->total_mapped_region].seg_type = DATA_SEGMENT;
+        child->total_mapped_region++;
+        break;
     }
   }
 
@@ -251,4 +265,61 @@ int do_fork( process* parent)
   insert_to_ready_queue( child );
 
   return child->pid;
+}
+
+
+ssize_t do_wait(uint64 pid)
+{
+  int flag = 0;
+  uint64 child_pid;
+  if (pid == -1)
+  {
+    //search
+    for(int i = 0;i<NPROC;i++)
+    {
+      if (procs[i].parent == current)
+      {
+        flag = 1 ;
+        child_pid = procs[i].pid;
+        if (procs[i].status == ZOMBIE)
+        {
+          procs[i].status = FREE;
+          return i;
+        }
+      }
+    }
+    // if it is running 
+    if(flag == 0) return -1;
+    else 
+    {
+      current->mark=child_pid;
+      insert_to_blocked_queue(current);
+      schedule();
+      return -2;
+    }
+  }
+  else
+  {     
+    for(int i = 0;i<NPROC;i++)
+    {
+      if (procs[i].pid == pid)
+      {
+        flag = 1;
+        child_pid = procs[i].pid;
+        if (procs[pid].status == ZOMBIE) 
+        {
+          procs[pid].status = FREE;
+          return pid;
+        }
+      }
+    }
+    if(flag == 0) return -1;
+    else
+    {
+      current->mark = child_pid;
+      insert_to_blocked_queue(current);
+      schedule();
+      return -2;
+    }
+  }
 }
