@@ -248,6 +248,40 @@ static size_t parse_args(arg_buf *arg_bug_msg) {
   return pk_argc - arg;
 }
 
+// load debugline
+elf_status load_debugline(elf_ctx *ctx)
+{
+  //首先获取sect header来定位str_sh和sys_sh
+  elf_sect_header debugseg;
+  elf_sect_header shstr_sh;
+  elf_sect_header temp_sh;
+
+  // find shstrtab
+  uint64 sect_num = ctx->ehdr.shnum;
+  uint64 shstr_offset = ctx->ehdr.shoff + ctx->ehdr.shstrndx * sizeof(elf_sect_header);
+  elf_fpread(ctx, (void *)&shstr_sh, sizeof(shstr_sh), shstr_offset);
+
+  char shstr_str[shstr_sh.size];
+  elf_fpread(ctx, &shstr_str, shstr_sh.size, shstr_sh.offset);
+
+  //find debugline
+  for(int i=0; i<sect_num; i++)
+  {
+    elf_fpread(ctx, (void*)&temp_sh, sizeof(temp_sh), ctx->ehdr.shoff+i*ctx->ehdr.shentsize);
+    uint32 type = temp_sh.type;
+    if(strcmp(shstr_str+temp_sh.name,".debug_line")==0)
+    {
+      debugseg = temp_sh; 
+      break;
+    }
+  }
+  static char debugline[MAX_DEBUGLINE];
+  if(elf_fpread(ctx,(void*)debugline,debugseg.size,debugseg.offset)!=debugseg.size) panic("debugline get failed!\n");
+  make_addr_line(ctx,debugline,debugseg.size);
+  return EL_OK;
+}
+
+
 //
 // load the elf of user application, by using the spike file interface.
 //
@@ -284,4 +318,7 @@ void load_bincode_from_host_elf(process *p) {
   spike_file_close( info.f );
 
   sprint("Application program entry point (virtual address): 0x%lx\n", p->trapframe->epc);
+  // add lab1 c2
+  if (load_debugline(&elfloader) != EL_OK) panic("Fail on loading debugline\n");
+
 }

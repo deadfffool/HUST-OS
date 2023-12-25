@@ -5,6 +5,7 @@
 #include "process.h"
 
 #define MAX_CMDLINE_ARGS 64
+#define MAX_DEBUGLINE 10000
 
 // elf header structure
 typedef struct elf_header_t {
