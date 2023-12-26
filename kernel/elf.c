@@ -190,8 +190,11 @@ void make_addr_line(elf_ctx *ctx, char *debug_line, uint64 length) {
         }
 endop:;
     }
+    // sprint("\n");
     // for (int i = 0; i < p->line_ind; i++)
     //     sprint("%p %d %d\n", p->line[i].addr, p->line[i].line, p->line[i].file);
+    // sprint("%d  %s\n",p->file->dir,p->file->file);
+    // sprint("%d  %s\n",p->file[1].dir,p->file[1].file);
 }
 
 //
@@ -251,7 +254,7 @@ static size_t parse_args(arg_buf *arg_bug_msg) {
 // load debugline
 elf_status load_debugline(elf_ctx *ctx)
 {
-  //首先获取sect header来定位str_sh和sys_sh
+  //首先获取sect heade
   elf_sect_header debugseg;
   elf_sect_header shstr_sh;
   elf_sect_header temp_sh;
