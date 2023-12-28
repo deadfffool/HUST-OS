@@ -22,7 +22,8 @@ typedef struct block_t{
   uint64 size;
   uint64 pa;
   uint64 va;
-  struct block_t * next;
+  // struct block_t * next;
+  uint64 mark;   //0 stands for unalloc, 1 stands for use, 2 stands for free
 }block;
 
 // the extremely simple definition of process, used for begining labs of PKE
@@ -33,8 +34,12 @@ typedef struct process_t {
   pagetable_t pagetable;
   // trapframe storing the context of a (User mode) process.
   trapframe* trapframe;
-  block * used_block;
-  block * free_block;
+
+  // heap master
+  // block * used_block;
+  // block * free_block;
+  block * master;
+  // uint64 num_blocks;
 }process;
 
 

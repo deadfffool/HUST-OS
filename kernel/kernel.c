@@ -71,6 +71,17 @@ void load_user_program(process *proc) {
   // here, we assume that the size of usertrap.S is smaller than a page.
   user_vm_map((pagetable_t)proc->pagetable, (uint64)trap_sec_start, PGSIZE, (uint64)trap_sec_start,
          prot_to_type(PROT_READ | PROT_EXEC, 0));
+
+  // load heap space 
+//   proc->num_blocks = 0;
+//   proc->free_block = NULL;
+//   proc->used_block = NULL;
+  void * pa = alloc_page();
+  uint64 va = g_ufree_page;
+  g_ufree_page += PGSIZE;
+  user_vm_map((pagetable_t)proc->pagetable, va, PGSIZE, (uint64)pa,prot_to_type(PROT_WRITE | PROT_READ, 1));
+  proc->master = (block*)pa;
+  memset(pa,0,PGSIZE);
 }
 
 //
