@@ -46,10 +46,6 @@ void switch_to(process* proc) {
   proc->trapframe->kernel_satp = read_csr(satp);  // kernel page table
   proc->trapframe->kernel_trap = (uint64)smode_trap_handler;
 
-  //better malloc
-  proc->free_block = NULL;
-  proc->used_block = NULL;
-
   // SSTATUS_SPP and SSTATUS_SPIE are defined in kernel/riscv.h
   // set S Previous Privilege mode (the SSTATUS_SPP bit in sstatus register) to User mode.
   unsigned long x = read_csr(sstatus);
@@ -79,7 +75,7 @@ block* alloc_block()
     block *b = (block*)pa;
     //place the block struct in the start of block
     b->pa = (uint64)pa + ROUNDUP(sizeof(block),8);
-    b->size = PGSIZE- ROUNDUP(sizeof(block),8);
+    b->size = PGSIZE - ROUNDUP(sizeof(block),8);
     b->va = (uint64)va + ROUNDUP(sizeof(block),8);
     b->next = NULL;
     return b;
@@ -89,47 +85,73 @@ uint64 better_alloc(uint64 size)
 {
   size = ROUNDUP(size,8);
 
-  uint64 re_va,size_of_block = ROUNDUP(sizeof(block),8);
-  block * b=current->free_block,* p=current->free_block,*new_b; //b is the block we want to malloc and p is its pre block
+  uint64 size_of_block = ROUNDUP(sizeof(block),8);
+  block * b=current->free_block,*new_b; //b is the block we want to malloc and p is its pre block
+  
   if(size>PGSIZE) panic("The page try to alloc is to large!\n");
 
-  if(current->free_block!=NULL)
+  if(current->free_block==NULL)
   {
-    b=b->next;
-    while((b->size+size_of_block)<size && b!=NULL)
-    {
-      b=b->next;
-      p=p->next;
-    }
-    if(b==NULL)
-    {
-      b = alloc_block();
-      p->next = b;
-    }
+    b = alloc_block();
+    sprint("Free_block is NULL, alloc a new_page\n");
+    current->free_block=b;
+  }
+  else if(current->free_block->size>size+size_of_block)
+  {
+    b = current->free_block;
   }
   else
   {
-    b = alloc_block();
-    current->free_block=b;
+    while((b->next->size)<(size+size_of_block) && b->next!=NULL)
+      b=b->next;
+    if(b->next==NULL)
+    {
+      b->next = alloc_block();
+      sprint("No match free_block, alloc a new_page\n");  
+    }
+    b = b->next;
   }
 
-
-  new_b = (block*)b->va;
-  new_b->pa = (uint64)b->pa + size_of_block;
+  sprint("%x\n",b);
+  //insert into used_block_chain
+  new_b = (block*)(b->pa);
+  new_b->pa = (uint64)(b->pa) + size_of_block;
   new_b->size = size;
-  new_b->va = (uint64)b->va + size_of_block;
-  new_b->next = NULL;
+  new_b->va = (uint64)(b->va) + size_of_block;
+  new_b->next = current->used_block;
+  current->used_block = new_b;
 
-  b->size -= size;
-  b->va += size;
-  b->pa += size;
+  b->size -= (size+size_of_block);
+  b->va += (size+size_of_block);
+  b->pa += (size+size_of_block);
   
-  
-
-  return re_va;
+  return new_b->va;
 }
 
 void  better_free(uint64 va)
 {
+  block * b=current->used_block, *p; //b is the block we want to free 
+  if(b->va == va)
+  {
+    b=current->used_block;
+    current->used_block->next = current->used_block->next->next;
+  }
+  else
+  {
+    while((b->next->va)!= va && b->next!=NULL)
+      b=b->next;
+    if(b->next==NULL)
+      panic("No block to free!");
+    p=b->next;
+    b->next = p->next;
+    b = p;
+  }
 
+  //put back
+  if(current->free_block==NULL)
+    current->free_block = b;
+  else{
+    b->next=current->free_block->next;
+    current->free_block = b; 
+  }
 }
