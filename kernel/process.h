@@ -102,7 +102,18 @@ process* alloc_process();
 int free_process( process* proc );
 // fork a child from parent
 int do_fork(process* parent);
+// add lab3_c2
+typedef struct semphore{
+  int signal;
+  process *waiting_queue;
+}semphore;
 
+#define SEM_MAX 32
+
+long do_sem_new(int resource);
+void do_sem_P(int mutex);
+void do_sem_V(int mutex);
+void insert_to_waiting_queue(int mutex);
 // current running process
 extern process* current;
 
