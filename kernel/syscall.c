@@ -14,7 +14,7 @@
 #include "vmm.h"
 #include "sched.h"
 #include "proc_file.h"
-
+#include "elf.h"
 #include "spike_interface/spike_utils.h"
 
 //
@@ -214,6 +214,13 @@ ssize_t sys_user_unlink(char * vfn){
   return do_unlink(pfn);
 }
 
+uint64 sys_user_exec(char * filename)
+{
+  char * file_name = (char*)user_va_to_pa((pagetable_t)(current->pagetable), filename);
+  // sprint("%s\n",file_name);
+  return user_exec(file_name);
+}
+
 //
 // [a0]: the syscall number; [a1] ... [a7]: arguments to the syscalls.
 // returns the code of success, (e.g., 0 means success, fail for otherwise)
@@ -262,6 +269,8 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
       return sys_user_link((char *)a1, (char *)a2);
     case SYS_user_unlink:
       return sys_user_unlink((char *)a1);
+    case SYS_user_exec:
+      return sys_user_exec((char *)a1);
     default:
       panic("Unknown syscall %ld \n", a0);
   }

@@ -65,4 +65,7 @@ elf_status elf_load(elf_ctx *ctx);
 
 void load_bincode_from_host_elf(process *p);
 
+//add @lab4_c2
+uint64 user_exec(char * filename);
+
 #endif
