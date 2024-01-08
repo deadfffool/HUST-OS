@@ -187,8 +187,15 @@ elf_status exec_load(elf_ctx *ctx) {
     if (ph_addr.memsz < ph_addr.filesz) return EL_ERR;
     if (ph_addr.vaddr + ph_addr.memsz < ph_addr.vaddr) return EL_ERR;
 
-    // allocate memory block before elf loading
+    // void *dest;
+    // if(i<=4)
+    //   // allocate memory block before elf loading
+    //   dest = (void *)user_va_to_pa((pagetable_t)(current->pagetable), (void*)current->mapped_info[i].va);
+    // else 
+    //   dest = elf_alloc_mb(ctx, ph_addr.vaddr, ph_addr.vaddr, ph_addr.memsz);
+
     void *dest = elf_alloc_mb(ctx, ph_addr.vaddr, ph_addr.vaddr, ph_addr.memsz);
+
     // void * dest = 
     // actual loading
     if (elf_fpread(ctx, dest, ph_addr.memsz, ph_addr.off) != ph_addr.memsz)
@@ -242,10 +249,8 @@ uint64 user_exec(char * filename)
     panic("fail to init elfloader.\n");
   sprint("elf_init OK!\n");
 
-  for(int i=0;i<current->total_mapped_region;i++)
-    sprint("%d\n",(current->mapped_info[i].seg_type));
-
-
+  // for(int i=0;i<current->total_mapped_region;i++)
+  //   sprint("%d\n",(current->mapped_info[i].seg_type));
 
   // load elf. elf_load() is defined above.
   if (exec_load(&elfloader) != EL_OK) panic("Fail on loading elf.\n");
