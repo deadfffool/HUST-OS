@@ -218,7 +218,8 @@ uint64 sys_user_exec(char * filename)
 {
   char * file_name = (char*)user_va_to_pa((pagetable_t)(current->pagetable), filename);
   // sprint("%s\n",file_name);
-  return user_exec(file_name);
+  do_exec(file_name);
+  return -1;
 }
 
 //

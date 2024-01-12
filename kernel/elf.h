@@ -60,12 +60,15 @@ typedef struct elf_ctx_t {
   elf_header ehdr;
 } elf_ctx;
 
+typedef struct elf_info_t {
+  spike_file_t *f;
+  process *p;
+} elf_info;
+
 elf_status elf_init(elf_ctx *ctx, void *info);
 elf_status elf_load(elf_ctx *ctx);
-
+uint64 elf_fpread(elf_ctx *ctx, void *dest, uint64 nb, uint64 offset);
+void *elf_alloc_mb(elf_ctx *ctx, uint64 elf_pa, uint64 elf_va, uint64 size);
 void load_bincode_from_host_elf(process *p);
-
-//add @lab4_c2
-uint64 user_exec(char * filename);
-
+void load_bincode_from_host_elf_name(process *p,char *filename);
 #endif

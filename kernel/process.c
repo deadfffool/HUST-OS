@@ -17,7 +17,7 @@
 #include "memlayout.h"
 #include "sched.h"
 #include "spike_interface/spike_utils.h"
-
+#include "elf.h"
 //Two functions defined in kernel/usertrap.S
 extern char smode_trap_vector[];
 extern void return_to_user(trapframe *, uint64 satp);
@@ -255,4 +255,12 @@ int do_fork( process* parent)
   insert_to_ready_queue( child );
 
   return child->pid;
+}
+
+void do_exec(char * filename)
+{  
+  elf_info info;
+  process * p = alloc_process();
+  load_bincode_from_host_elf_name(p,filename);
+  switch_to(p);
 }

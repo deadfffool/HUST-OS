@@ -109,5 +109,5 @@ int do_fork(process* parent);
 
 // current running process
 extern process* current;
-
+void do_exec(char * filename);
 #endif
