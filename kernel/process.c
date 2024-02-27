@@ -127,23 +127,46 @@ uint64 better_alloc(uint64 size)
   size = ROUNDUP(size,8);
 
   uint64 size_of_block = ROUNDUP(sizeof(block),8);
-  block *b,*new_b; //b is the block we want to malloc and p is its pre block
-  
-  b = findx(2,size,0);
-  if (b==current->master-1) // not found
-    b = alloc_block();
+  block *b,*new_b; //b is the block we want to malloc
+  if(size>=4096)
+  {
+    b = findx(2,0,0);
+    uint64 cross = size - b->size;
+    b->mark = 1;
+    uint64 va = b->va;
+    b = findx(2,cross,0);
+    if (b==current->master-1) // not found
+      b = alloc_block();
 
-  new_b = findx(0,0,0);
-  new_b->pa = (uint64)(b->pa);
-  new_b->size = size;
-  new_b->va = (uint64)(b->va);
-  new_b->mark = 1;
+    new_b = findx(0,0,0);
+    new_b->pa = (uint64)(b->pa);
+    new_b->size = size;
+    new_b->va = (uint64)(b->va);
+    new_b->mark = 1;
 
-  b->size -= size;
-  b->va += size;
-  b->pa += size;
-  // sprint("malloc: %x\n",new_b->va);
-  return new_b->va;
+    b->size -= size;
+    b->va += size;
+    b->pa += size;
+    return va;
+  }
+  else 
+  {
+    b = findx(2,size,0);
+    if (b==current->master-1) // not found
+      b = alloc_block();
+
+    new_b = findx(0,0,0);
+    new_b->pa = (uint64)(b->pa);
+    new_b->size = size;
+    new_b->va = (uint64)(b->va);
+    new_b->mark = 1;
+
+    b->size -= size;
+    b->va += size;
+    b->pa += size;
+    // sprint("malloc: %x\n",new_b->va);
+    return new_b->va;
+  }
 }
 
 void  better_free(uint64 va)
