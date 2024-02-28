@@ -494,7 +494,11 @@ struct vinode *rfs_create(struct vinode *parent, struct dentry *sub_dentry) {
   // nlinks, i.e., the number of links.
   // blocks, i.e., its block count.
   // Note: DO NOT DELETE CODE BELOW PANIC.
-  panic("You need to implement the code of populating a disk inode in lab4_1.\n" );
+  free_dinode->size = 0; // Set the size to 0 for a new file.
+  free_dinode->type = R_FILE; // Set the type to the appropriate RFS file type (e.g., R_FILE).
+  free_dinode->nlinks = 1; // Set the number of links to 1 for a new file.
+  free_dinode->blocks = 0; // Set the block count to 0 for a new file.
+
 
   // DO NOT REMOVE ANY CODE BELOW.
   // allocate a free block for the file
@@ -591,7 +595,26 @@ int rfs_link(struct vinode *parent, struct dentry *sub_dentry, struct vinode *li
   //    rfs_add_direntry here.
   // 3) persistent the changes to disk. you can use rfs_write_back_vinode here.
   //
-  panic("You need to implement the code for creating a hard link in lab4_3.\n" );
+  const char *link_name = sub_dentry->name;
+
+  // 增加现有文件的链接计数
+  link_node->nlinks++;
+
+  // 更新并写回链接节点的链接计数到磁盘
+  struct rfs_device *rdev = rfs_device_list[parent->sb->s_dev->dev_id];
+  struct rfs_dinode *link_dinode = rfs_read_dinode(rdev, link_node->inum);
+  link_dinode->nlinks = link_node->nlinks;
+  rfs_write_dinode(rdev, link_dinode, link_node->inum);
+  free_page(link_dinode);
+
+  // 将新链接文件添加到父目录
+  int result = rfs_add_direntry(parent, link_name, link_node->inum);
+  if (result == -1) {
+    sprint("rfs_link: rfs_add_direntry failed");
+    return -1;
+  }
+
+  return 0;
 }
 
 //
@@ -787,7 +810,12 @@ int rfs_readdir(struct vinode *dir_vinode, struct dir *dir, int *offset) {
   // the method of returning is to popular proper members of "dir", more specifically,
   // dir->name and dir->inum.
   // note: DO NOT DELETE CODE BELOW PANIC.
-  panic("You need to implement the code for reading a directory entry of rfs in lab4_2.\n" );
+  // Copy the name from the directory entry to the "dir" structure.
+  strcpy(dir->name, p_direntry->name);
+  dir->name[RFS_MAX_FILE_NAME_LEN - 1] = '\0'; // Ensure null-terminated string.
+
+  // Set the inode number in the "dir" structure.
+  dir->inum = p_direntry->inum;
 
   // DO NOT DELETE CODE BELOW.
   (*offset)++;
