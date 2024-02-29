@@ -32,18 +32,18 @@ void load_user_program(process *proc) {
 // s_start: S-mode entry point of riscv-pke OS kernel.
 //
 int s_start(void) {
-  sprint("hartid = ?: Enter supervisor mode...\n");
+  sprint("hartid = %d: Enter supervisor mode...\n",read_tp());
   // Note: we use direct (i.e., Bare mode) for memory mapping in lab1.
   // which means: Virtual Address = Physical Address
   // therefore, we need to set satp to be 0 for now. we will enable paging in lab2_x.
   // 
   // write_csr is a macro defined in kernel/riscv.h
   write_csr(satp, 0);
-
+  
   // the application code (elf) is first loaded into memory, and then put into execution
   load_user_program(&user_app);
 
-  sprint("hartid = ?: Switch to user mode...\n");
+  sprint("hartid = %d: Switch to user mode...\n",read_tp());
   // switch_to() is defined in kernel/process.c
   switch_to(&user_app);
 

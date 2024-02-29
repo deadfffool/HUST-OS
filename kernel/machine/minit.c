@@ -97,6 +97,7 @@ void m_start(uintptr_t hartid, uintptr_t dtb) {
   // init the spike file interface (stdin,stdout,stderr)
   // functions with "spike_" prefix are all defined in codes under spike_interface/,
   // sprint is also defined in spike_interface/spike_utils.c
+  //add lab1c3
   if(hartid == 0)
   {
     spike_file_init();
@@ -134,14 +135,7 @@ void m_start(uintptr_t hartid, uintptr_t dtb) {
   timerinit(hartid);
 
   // switch to supervisor mode (S mode) and jump to s_start(), i.e., set pc to mepc
-  if(hartid == 0)
-  {
-    sprint("In m_start, hartid:%d\n", hartid);
-    asm volatile("mret");
-  }
-  else
-  {
-    sprint("In m_start, hartid:%d\n", hartid);
-    asm volatile("mret");
-  }
+  write_tp(hartid);
+  sprint("In m_start, hartid:%d\n", hartid);
+  asm volatile("mret");
 }
