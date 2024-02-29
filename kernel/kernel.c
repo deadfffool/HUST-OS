@@ -95,7 +95,7 @@ int s_start(void) {
     // build the kernel page table
     kern_vm_init();
   }
-  sync_barrier(&barrier,2);
+  sync_barrier(&barrier,NCPU);
   // now, switch to paging mode by turning on paging (SV39)
   enable_paging();
   // the code now formally works in paging mode, meaning the page table is now in use.
