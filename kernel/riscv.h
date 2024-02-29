@@ -141,6 +141,13 @@ static inline uint64 read_sp(void) {
 static inline uint64 read_tp(void) {
   uint64 x;
   asm volatile("mv %0, tp" : "=r"(x));
+  return
+   x;
+}
+static inline uint64 mycpu(void)
+{
+  uint64 x;
+  x = read_tp();
   return x;
 }
 
