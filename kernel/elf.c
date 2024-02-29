@@ -23,8 +23,8 @@ static void *elf_alloc_mb(elf_ctx *ctx, uint64 elf_pa, uint64 elf_va, uint64 siz
   elf_info *msg = (elf_info *)ctx->info;
   // we assume that size of proram segment is smaller than a page.
   kassert(size < PGSIZE);
-  void *pa = alloc_page();
-  if (pa == 0) panic("uvmalloc mem alloc falied\n");
+  void * pa = alloc_page();
+  if (!pa) panic("uvmalloc mem alloc falied\n");
 
   memset((void *)pa, 0, PGSIZE);
   user_vm_map((pagetable_t)msg->p->pagetable, elf_va, PGSIZE, (uint64)pa,

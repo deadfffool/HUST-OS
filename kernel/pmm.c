@@ -27,30 +27,17 @@ typedef struct node {
 static list_node g_free_mem_list;
 
 //
-// actually creates the freepage list. each page occupies 4KB (PGSIZE), i.e., small page.
-// PGSIZE is defined in kernel/riscv.h, ROUNDUP is defined in util/functions.h.
-//
-static void create_freepage_list(uint64 start, uint64 end) {
-  acquire(&lock);
-  // sprint("free %d acquire\n",mycpu());
-  g_free_mem_list.next = 0;
-  for (uint64 p = ROUNDUP(start, PGSIZE); p + PGSIZE < end; p += PGSIZE)
-    free_page( (void *)p );
-  // sprint("free %d release\n",mycpu());
-  release(&lock);
-}
-
-//
 // place a physical page at *pa to the free list of g_free_mem_list (to reclaim the page)
 //
 void free_page(void *pa) {
+  // acquire(&lock);
   if (((uint64)pa % PGSIZE) != 0 || (uint64)pa < free_mem_start_addr || (uint64)pa >= free_mem_end_addr)
     panic("free_page 0x%lx \n", pa);
 
   // insert a physical page to g_free_mem_list
-  list_node *n = (list_node *)pa;
-  n->next = g_free_mem_list.next;
-  g_free_mem_list.next = n;
+  ((list_node *)pa)->next = g_free_mem_list.next;
+  g_free_mem_list.next = pa;
+  // release(&lock);
 }
 
 //
@@ -61,21 +48,35 @@ void *alloc_page(void) {
   acquire(&lock);
   // sprint("alloc %d acquire\n",mycpu());
   list_node *n = g_free_mem_list.next;
-  uint64 hartid = mycpu();
-  if (vm_alloc_stage[hartid]) {
-    sprint("hartid = %ld: alloc page 0x%x\n", hartid, n);
-  }
-  if (n) g_free_mem_list.next = n->next;
+  if (vm_alloc_stage[mycpu()])
+    sprint("hartid = %d: alloc page 0x%lx\n", mycpu(), n);
+  if (n!=0)
+    g_free_mem_list.next = n->next;
   // sprint("alloc %d release\n",mycpu());
   release(&lock);
   return (void *)n;
 }
+
+
+//
+// actually creates the freepage list. each page occupies 4KB (PGSIZE), i.e., small page.
+// PGSIZE is defined in kernel/riscv.h, ROUNDUP is defined in util/functions.h.
+//
+static void create_freepage_list(uint64 start, uint64 end) { 
+  g_free_mem_list.next = 0;
+  uint64 i = 0;
+  for (uint64 p = ROUNDUP(start, PGSIZE); p + PGSIZE < end; p += PGSIZE){
+    free_page( (void *)p );
+  }
+}
+
 
 //
 // pmm_init() establishes the list of free physical pages according to available
 // physical memory space.
 //
 void pmm_init() {
+  spinlock_init(&lock);
   // start of kernel program segment
   uint64 g_kernel_start = KERN_BASE;
   uint64 g_kernel_end = (uint64)&_end;

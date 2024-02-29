@@ -19,35 +19,32 @@ static inline void sync_barrier(volatile int *counter, int all) {
   }
 }
 
-typedef struct spin_lock {
-  uint64 locked;       // Is the lock held? 
-  uint64 cpu;   // The cpu holding the lock.
-}spinlock;
+typedef struct {
+  volatile uint64 lock;
+} spinlock;
 
-static int holding(spinlock *lk)
-{
-  int r;
-  r = (lk->locked && lk->cpu == mycpu());
-  return r;
+static void spinlock_init(spinlock *lock) {
+    lock->lock = 0;
 }
 
 static void acquire(spinlock *lk)
 {
   intr_off();
-  if(holding(lk))
-    panic("acquire");
-  while(__sync_lock_test_and_set(&lk->locked, 1) != 0);
-  __sync_synchronize();
-  lk->cpu = mycpu();
+  uint64 value;
+  do{
+    asm volatile("amoswap.w.aq %0, %1, (%2)"
+                          : "=r"(value)
+                          : "r"(1), "r"(&(lk->lock))
+                          :);
+  } while (value != 0);
 }
 
 static void release(spinlock *lk)
 {
-  if(!holding(lk))
-    panic("release");
-  __sync_synchronize();
-  __sync_lock_release(&lk->locked);
-  lk->cpu = 0;
+  asm volatile("amoswap.w.rl x0, %0, (%1)"
+                      :
+                      : "r"(0), "r"(&(lk->lock))
+                      :);
   intr_on();
 }
 

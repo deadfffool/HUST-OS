@@ -25,6 +25,7 @@ extern void mtrapvec();
 // Synchronize
 extern void sync_barrier(volatile int *counter, int all);
 volatile int counter = 0;
+
 // htif is defined in spike_interface/spike_htif.c, marks the availability of HTIF
 extern uint64 htif;
 // g_mem_size is defined in spike_interface/spike_memory.c, size of the emulated memory
