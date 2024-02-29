@@ -106,7 +106,7 @@ void m_start(uintptr_t hartid, uintptr_t dtb) {
     // init_dtb() is defined above.
     init_dtb(dtb);
   }
-  sync_barrier(&counter,2);
+  sync_barrier(&counter,NCPU);
 
   // save the address of trap frame for interrupt in M mode to "mscratch". added @lab1_2
   write_csr(mscratch, &g_itrframe);
