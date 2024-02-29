@@ -14,7 +14,7 @@ process user_app[NCPU];
 
 void load_user_program(process *proc) {
   // set hart id for this proc
-  uint64 hart_id = read_tp();
+  uint64 hart_id = mycpu();
   // USER_TRAP_FRAME is a physical address defined in kernel/config.h
   // USER_KSTACK is also a physical address defined in kernel/config.h
   // USER_TRAP_FRAME is a physical address defined in kernel/config.h
@@ -28,7 +28,7 @@ void load_user_program(process *proc) {
 // s_start: S-mode entry point of riscv-pke OS kernel.
 //
 int s_start(void) {
-  uint64 hartid = read_tp();
+  uint64 hartid = mycpu();
   sprint("hartid = %d: Enter supervisor mode...\n",hartid);
   // Note: we use direct (i.e., Bare mode) for memory mapping in lab1.
   // which means: Virtual Address = Physical Address

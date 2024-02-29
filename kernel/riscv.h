@@ -144,6 +144,13 @@ static inline uint64 read_tp(void) {
   return x;
 }
 
+static inline uint64 mycpu(void)
+{
+  uint64 x;
+  x = read_tp();
+  return x;
+}
+
 // write tp, the thread pointer, holding hartid (core number), the index into cpus[].
 static inline void write_tp(uint64 x) { asm volatile("mv tp, %0" : : "r"(x)); }
 
