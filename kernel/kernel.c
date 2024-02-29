@@ -53,7 +53,6 @@ void load_user_program(process *proc) {
   // allocate pages to both user-kernel stack and user app itself. added @lab2_1
   proc->kstack = (uint64)alloc_page() + PGSIZE;   //user kernel stack top
   uint64 user_stack = (uint64)alloc_page();       //phisical address of user stack bottom
-
   // USER_STACK_TOP = 0x7ffff000, defined in kernel/memlayout.h
   proc->trapframe->regs.sp = USER_STACK_TOP;  //virtual address of user stack top
 
@@ -100,7 +99,7 @@ int s_start(void) {
   // now, switch to paging mode by turning on paging (SV39)
   enable_paging();
   // the code now formally works in paging mode, meaning the page table is now in use.
-  sprint("kernel page table is on \n");
+  // sprint("kernel page table is on \n");
   // the application code (elf) is first loaded into memory, and then put into execution
   load_user_program(&user_app[hartid]);
 

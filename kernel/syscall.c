@@ -12,8 +12,9 @@
 #include "util/functions.h"
 #include "pmm.h"
 #include "vmm.h"
-#include "spike_interface/spike_utils.h"
 #include "sync_utils.h"
+#include "spike_interface/spike_utils.h"
+
 //
 // implement the SYS_user_print syscall
 //

@@ -4,6 +4,7 @@
 #include "config.h"
 #include "util/string.h"
 #include "memlayout.h"
+#include "sync_utils.h"
 #include "spike_interface/spike_utils.h"
 
 // _end is defined in kernel/kernel.lds, it marks the ending (virtual) address of PKE kernel
@@ -16,6 +17,8 @@ static uint64 free_mem_start_addr;  //beginning address of free memory
 static uint64 free_mem_end_addr;    //end address of free memory (not included)
 
 int vm_alloc_stage[NCPU] = { 0 }; // 0 for kernel alloc, 1 for user alloc
+spinlock lock;
+
 typedef struct node {
   struct node *next;
 } list_node;
@@ -28,9 +31,13 @@ static list_node g_free_mem_list;
 // PGSIZE is defined in kernel/riscv.h, ROUNDUP is defined in util/functions.h.
 //
 static void create_freepage_list(uint64 start, uint64 end) {
+  acquire(&lock);
+  // sprint("free %d acquire\n",mycpu());
   g_free_mem_list.next = 0;
   for (uint64 p = ROUNDUP(start, PGSIZE); p + PGSIZE < end; p += PGSIZE)
     free_page( (void *)p );
+  // sprint("free %d release\n",mycpu());
+  release(&lock);
 }
 
 //
@@ -51,12 +58,16 @@ void free_page(void *pa) {
 // Allocates only ONE page!
 //
 void *alloc_page(void) {
+  acquire(&lock);
+  // sprint("alloc %d acquire\n",mycpu());
   list_node *n = g_free_mem_list.next;
-  uint64 hartid = 0;
+  uint64 hartid = mycpu();
   if (vm_alloc_stage[hartid]) {
     sprint("hartid = %ld: alloc page 0x%x\n", hartid, n);
   }
   if (n) g_free_mem_list.next = n->next;
+  // sprint("alloc %d release\n",mycpu());
+  release(&lock);
   return (void *)n;
 }
 
