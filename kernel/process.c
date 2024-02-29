@@ -20,14 +20,15 @@ extern char smode_trap_vector[];
 extern void return_to_user(trapframe*);
 
 // current points to the currently running user-mode application.
-process* current = NULL;
+process* current[NCPU];
+
 
 //
 // switch to a user-mode process
 //
 void switch_to(process* proc) {
   assert(proc);
-  current = proc;
+  current[read_tp()] = proc;
 
   // write the smode_trap_vector (64-bit func. address) defined in kernel/strap_vector.S
   // to the stvec privilege register, such that trap handler pointed by smode_trap_vector
@@ -38,6 +39,8 @@ void switch_to(process* proc) {
   // the process next re-enters the kernel.
   proc->trapframe->kernel_sp = proc->kstack;  // process's kernel stack
   proc->trapframe->kernel_trap = (uint64)smode_trap_handler;
+  proc->trapframe->regs.tp = read_tp();
+
 
   // SSTATUS_SPP and SSTATUS_SPIE are defined in kernel/riscv.h
   // set S Previous Privilege mode (the SSTATUS_SPP bit in sstatus register) to User mode.

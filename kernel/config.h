@@ -20,4 +20,6 @@
 // the trap frame used to assemble the user "process"
 #define USER_TRAP_FRAME 0x81300000
 
+// add lab1c3
+#define HART_STACK_OFFSET 0x300000
 #endif
