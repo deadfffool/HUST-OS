@@ -257,7 +257,6 @@ void heap_copy_on_write(process *child, process *parent, uint64 pa) {
       *child_pte &= PTE_W | PTE_R;    // 设置读写权限
       user_vm_map(child->pagetable, heap_block, PGSIZE, (uint64)pa, prot_to_type(PROT_WRITE | PROT_READ, 1));
       memcpy(pa, (void *)lookup_pa(parent->pagetable, heap_block), PGSIZE);
-      sprint("heap block pa:%lx is already copied to child.\n", heap_block_pa);
       break;
     }
   }

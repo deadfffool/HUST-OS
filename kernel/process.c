@@ -164,7 +164,8 @@ int free_process( process* proc ) {
   // but for proxy kernel, it (memory leaking) may NOT be a really serious issue,
   // as it is different from regular OS, which needs to run 7x24.
   proc->status = ZOMBIE;
-
+  if (proc->pid == 0) // 0号进程退出，程序终止
+    return 0;
   return 0;
 }
 
@@ -192,48 +193,64 @@ int do_fork( process* parent)
           (void*)lookup_pa(parent->pagetable, parent->mapped_info[i].va), PGSIZE );
         break;
       case HEAP_SEGMENT:
-            // 需要复制父进程的堆空间
-            for (uint64 heap_block = current->user_heap.heap_bottom;
-                heap_block < current->user_heap.heap_top; heap_block += PGSIZE) 
-            {
-              uint64 parent_pa = lookup_pa(parent->pagetable, heap_block);
-              // 使用写时复制模式映射堆空间
-              user_vm_map((pagetable_t)child->pagetable, heap_block, PGSIZE, parent_pa,
-                          prot_to_type(PROT_READ, 1));
-              // 设置pte
-              pte_t *child_pte = page_walk(child->pagetable, heap_block, 0);
-              if(child_pte == NULL) {
-                panic("error when mapping heap segment!");
-              }
-              *child_pte |= PTE_C; // 设置写时复制标志
-              pte_t *parent_pte = page_walk(parent->pagetable, heap_block, 0);
-              if(parent_pte == NULL) {
-                panic("error when mapping heap segment!");
-              }
-              *parent_pte &= (~PTE_W); // 设置父进程的pte为只读
+      {
+        // 需要复制父进程的堆空间
+        for (uint64 heap_block = current->user_heap.heap_bottom;
+            heap_block < current->user_heap.heap_top; heap_block += PGSIZE) 
+        {
+          uint64 parent_pa = lookup_pa(parent->pagetable, heap_block);
+          // 使用写时复制模式映射堆空间
+          user_vm_map((pagetable_t)child->pagetable, heap_block, PGSIZE, parent_pa,
+                      prot_to_type(PROT_READ, 1));
+          // 设置pte
+          pte_t *child_pte = page_walk(child->pagetable, heap_block, 0);
+          if(child_pte == NULL)
+            panic("error when mapping heap segment!");
+          *child_pte |= PTE_C; // 设置写时复制标志
+          pte_t *parent_pte = page_walk(parent->pagetable, heap_block, 0);
+          if(parent_pte == NULL)
+            panic("error when mapping heap segment!");
+          *parent_pte &= (~PTE_W); // 设置父进程的pte为只读
 
-            }
+        }
+        child->mapped_info[HEAP_SEGMENT].npages = parent->mapped_info[HEAP_SEGMENT].npages;
+        memcpy((void*)&child->user_heap, (void*)&parent->user_heap, sizeof(parent->user_heap));
+        break;
+      } 
       case CODE_SEGMENT:
-        // TODO (lab3_1): implment the mapping of child code segment to parent's
-        // code segment.
-        // hint: the virtual address mapping of code segment is tracked in mapped_info
-        // page of parent's process structure. use the information in mapped_info to
-        // retrieve the virtual to physical mapping of code segment.
-        // after having the mapping information, just map the corresponding virtual
-        // address region of child to the physical pages that actually store the code
-        // segment of parent process.
-        // DO NOT COPY THE PHYSICAL PAGES, JUST MAP THEM.
-        uint64 pa = lookup_pa(parent->pagetable, parent->mapped_info[i].va);
-        user_vm_map(child->pagetable, parent->mapped_info[i].va, PGSIZE, pa, prot_to_type(PROT_READ | PROT_EXEC, 1));
-        sprint("do_fork map code segment at pa:%lx of parent to child at va:%lx.\n", pa, parent->mapped_info[i].va);
-
-        // after mapping, register the vm region (do not delete codes below!)
+      {
+        for (int j = 0; j < parent->mapped_info[i].npages; j++)
+        {
+          uint64 addr = lookup_pa(parent->pagetable, parent->mapped_info[i].va + j * PGSIZE);
+          // 使用写时复制模式映射代码段
+          map_pages(child->pagetable, parent->mapped_info[i].va + j * PGSIZE, PGSIZE,
+                    addr, prot_to_type(PROT_READ | PROT_EXEC, 1)); // 只读映射
+          sprint("do_fork map code segment at pa:%lx of parent to child at va:%lx.\n",
+                addr, parent->mapped_info[i].va + j * PGSIZE);
+        }
         child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
         child->mapped_info[child->total_mapped_region].npages =
-          parent->mapped_info[i].npages;
+            parent->mapped_info[i].npages;
         child->mapped_info[child->total_mapped_region].seg_type = CODE_SEGMENT;
         child->total_mapped_region++;
         break;
+      }
+      case DATA_SEGMENT:
+      {
+        for (int j = 0; j < parent->mapped_info[i].npages; j++)
+        {
+          uint64 addr = lookup_pa(parent->pagetable, parent->mapped_info[i].va + j * PGSIZE);
+          // 使用写时复制模式映射数据段
+          map_pages(child->pagetable, parent->mapped_info[i].va + j * PGSIZE, PGSIZE,
+                    addr, prot_to_type(PROT_READ, 1)); // 只读映射
+        }
+        child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
+        child->mapped_info[child->total_mapped_region].npages =
+            parent->mapped_info[i].npages;
+        child->mapped_info[child->total_mapped_region].seg_type = DATA_SEGMENT;
+        child->total_mapped_region++;
+        break;
+      }
     }
   }
 
