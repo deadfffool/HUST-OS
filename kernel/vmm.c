@@ -189,12 +189,11 @@ void user_vm_unmap(pagetable_t page_dir, uint64 va, uint64 size, int free) {
   // (use free_page() defined in pmm.c) the physical pages. lastly, invalidate the PTEs.
   // as naive_free reclaims only one page at a time, you only need to consider one page
   // to make user/app_naive_malloc to behave correctly.
-  if(free){
-    pte_t *PTE = page_walk(page_dir, va, 0);
-    if(PTE){
+  pte_t *PTE = page_walk(page_dir, va, 0);
+  if(PTE){
+    if(free)
       free_page((void *)(PTE2PA(*PTE)));
-      *PTE = *PTE & (~PTE_V);
-    }
+    *PTE = *PTE & (~PTE_V);
   }
 }
 
@@ -216,48 +215,11 @@ void print_proc_vmspace(process* proc) {
   }
 }
 
-//
-// added @lab3_c3, check if the page is copy-on-write
-// 
-int cowcheck(pagetable_t pagetable, uint64 va)
-{
-  if(va >= MAXVA)
-    return 0;
-  pte_t *pte;
-  if((pte = page_walk(pagetable, va, 0)) == 0)
-    return 0;
-  if((*pte & PTE_V) == 0)
-    return 0;
-  if((*pte & PTE_C))
-    return 1;
-  return 0;
-}
-
 // added on lab3_c3
-//
-void heap_copy_on_write(process *child, process *parent, uint64 pa) {
-  // 需要复制父进程的堆空间
-  for (uint64 heap_block = parent->user_heap.heap_bottom;
-      heap_block < parent->user_heap.heap_top; heap_block += PGSIZE) 
-  {
-    uint64 heap_block_pa = lookup_pa(parent->pagetable, heap_block);
-    if(heap_block_pa == 0) {
-      panic("error when looking up heap block pa!");
-    }
-    if(heap_block_pa >= pa && heap_block_pa < pa + PGSIZE) {
-      user_vm_unmap(child->pagetable, heap_block, PGSIZE, 0); // 取消映射
-      void *pa = alloc_page();
-      if ((void *)pa == NULL)
-        panic("Can not allocate a new physical page.\n");
-      pte_t *child_pte = page_walk(child->pagetable, heap_block, 0);
-      if(child_pte == NULL) {
-        panic("error when mapping heap segment!");
-      }
-      *child_pte |= (~PTE_C); // 设置写时复制标志，为已复制
-      *child_pte &= PTE_W | PTE_R;    // 设置读写权限
-      user_vm_map(child->pagetable, heap_block, PGSIZE, (uint64)pa, prot_to_type(PROT_WRITE | PROT_READ, 1));
-      memcpy(pa, (void *)lookup_pa(parent->pagetable, heap_block), PGSIZE);
-      break;
-    }
-  }
+void copy_on_write(process *proc, uint64 va) {
+  uint64 pa = lookup_pa(proc->pagetable,va);
+  void *new_pa = alloc_page();
+  user_vm_unmap(proc->pagetable, va, PGSIZE, 0);
+  user_vm_map(proc->pagetable, va, PGSIZE, (uint64)new_pa, prot_to_type(PROT_WRITE | PROT_READ, 1));
+  memcpy(new_pa, (void*)pa, PGSIZE);
 }

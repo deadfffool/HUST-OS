@@ -194,24 +194,23 @@ int do_fork( process* parent)
         break;
       case HEAP_SEGMENT:
       {
-        // 需要复制父进程的堆空间
-        for (uint64 heap_block = current->user_heap.heap_bottom;
-            heap_block < current->user_heap.heap_top; heap_block += PGSIZE) 
+        for (uint64 heap_block = current->user_heap.heap_bottom; heap_block < current->user_heap.heap_top; heap_block += PGSIZE) 
         {
           uint64 parent_pa = lookup_pa(parent->pagetable, heap_block);
-          // 使用写时复制模式映射堆空间
+          // 直接映射
           user_vm_map((pagetable_t)child->pagetable, heap_block, PGSIZE, parent_pa,
                       prot_to_type(PROT_READ, 1));
-          // 设置pte
+          // pte
           pte_t *child_pte = page_walk(child->pagetable, heap_block, 0);
           if(child_pte == NULL)
             panic("error when mapping heap segment!");
-          *child_pte |= PTE_C; // 设置写时复制标志
+          *child_pte &= (~PTE_W);
+          *child_pte |= PTE_C; 
           pte_t *parent_pte = page_walk(parent->pagetable, heap_block, 0);
           if(parent_pte == NULL)
             panic("error when mapping heap segment!");
-          *parent_pte &= (~PTE_W); // 设置父进程的pte为只读
-
+          *parent_pte &= (~PTE_W);
+          *parent_pte |= PTE_C; 
         }
         child->mapped_info[HEAP_SEGMENT].npages = parent->mapped_info[HEAP_SEGMENT].npages;
         memcpy((void*)&child->user_heap, (void*)&parent->user_heap, sizeof(parent->user_heap));
@@ -222,15 +221,12 @@ int do_fork( process* parent)
         for (int j = 0; j < parent->mapped_info[i].npages; j++)
         {
           uint64 addr = lookup_pa(parent->pagetable, parent->mapped_info[i].va + j * PGSIZE);
-          // 使用写时复制模式映射代码段
-          map_pages(child->pagetable, parent->mapped_info[i].va + j * PGSIZE, PGSIZE,
-                    addr, prot_to_type(PROT_READ | PROT_EXEC, 1)); // 只读映射
-          sprint("do_fork map code segment at pa:%lx of parent to child at va:%lx.\n",
-                addr, parent->mapped_info[i].va + j * PGSIZE);
+          // code segment and data segment are shared by parents and child
+          map_pages(child->pagetable, parent->mapped_info[i].va + j * PGSIZE, PGSIZE, addr, prot_to_type(PROT_READ | PROT_EXEC, 1));
+          sprint("do_fork map code segment at pa:%lx of parent to child at va:%lx.\n", addr, parent->mapped_info[i].va + j * PGSIZE);
         }
         child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
-        child->mapped_info[child->total_mapped_region].npages =
-            parent->mapped_info[i].npages;
+        child->mapped_info[child->total_mapped_region].npages = parent->mapped_info[i].npages;
         child->mapped_info[child->total_mapped_region].seg_type = CODE_SEGMENT;
         child->total_mapped_region++;
         break;
@@ -240,13 +236,10 @@ int do_fork( process* parent)
         for (int j = 0; j < parent->mapped_info[i].npages; j++)
         {
           uint64 addr = lookup_pa(parent->pagetable, parent->mapped_info[i].va + j * PGSIZE);
-          // 使用写时复制模式映射数据段
-          map_pages(child->pagetable, parent->mapped_info[i].va + j * PGSIZE, PGSIZE,
-                    addr, prot_to_type(PROT_READ, 1)); // 只读映射
+          map_pages(child->pagetable, parent->mapped_info[i].va + j * PGSIZE, PGSIZE, addr, prot_to_type(PROT_READ, 1)); 
         }
         child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
-        child->mapped_info[child->total_mapped_region].npages =
-            parent->mapped_info[i].npages;
+        child->mapped_info[child->total_mapped_region].npages = parent->mapped_info[i].npages;
         child->mapped_info[child->total_mapped_region].seg_type = DATA_SEGMENT;
         child->total_mapped_region++;
         break;
