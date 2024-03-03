@@ -10,4 +10,4 @@ obj/
 .VSCodeCounter/
 .vscode/
 pke_out.txt
-.DS_Store
+# .DS_Store
