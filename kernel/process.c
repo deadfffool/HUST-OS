@@ -192,37 +192,27 @@ int do_fork( process* parent)
           (void*)lookup_pa(parent->pagetable, parent->mapped_info[i].va), PGSIZE );
         break;
       case HEAP_SEGMENT:
-        // build a same heap for child process.
+            // 需要复制父进程的堆空间
+            for (uint64 heap_block = current->user_heap.heap_bottom;
+                heap_block < current->user_heap.heap_top; heap_block += PGSIZE) 
+            {
+              uint64 parent_pa = lookup_pa(parent->pagetable, heap_block);
+              // 使用写时复制模式映射堆空间
+              user_vm_map((pagetable_t)child->pagetable, heap_block, PGSIZE, parent_pa,
+                          prot_to_type(PROT_READ, 1));
+              // 设置pte
+              pte_t *child_pte = page_walk(child->pagetable, heap_block, 0);
+              if(child_pte == NULL) {
+                panic("error when mapping heap segment!");
+              }
+              *child_pte |= PTE_C; // 设置写时复制标志
+              pte_t *parent_pte = page_walk(parent->pagetable, heap_block, 0);
+              if(parent_pte == NULL) {
+                panic("error when mapping heap segment!");
+              }
+              *parent_pte &= (~PTE_W); // 设置父进程的pte为只读
 
-        // convert free_pages_address into a filter to skip reclaimed blocks in the heap
-        // when mapping the heap blocks
-        {
-          int free_block_filter[MAX_HEAP_PAGES];
-          memset(free_block_filter, 0, MAX_HEAP_PAGES);
-          uint64 heap_bottom = parent->user_heap.heap_bottom;
-          for (int i = 0; i < parent->user_heap.free_pages_count; i++) {
-            int index = (parent->user_heap.free_pages_address[i] - heap_bottom) / PGSIZE;
-            free_block_filter[index] = 1;
-          }
-
-          // copy and map the heap blocks
-          for (uint64 heap_block = current->user_heap.heap_bottom;
-              heap_block < current->user_heap.heap_top; heap_block += PGSIZE) {
-            if (free_block_filter[(heap_block - heap_bottom) / PGSIZE])  // skip free blocks
-              continue;
-
-            void* child_pa = alloc_page();
-            memcpy(child_pa, (void*)lookup_pa(parent->pagetable, heap_block), PGSIZE);
-            user_vm_map((pagetable_t)child->pagetable, heap_block, PGSIZE, (uint64)child_pa,
-                        prot_to_type(PROT_WRITE | PROT_READ, 1));
-          }
-
-          child->mapped_info[HEAP_SEGMENT].npages = parent->mapped_info[HEAP_SEGMENT].npages;
-
-          // copy the heap manager from parent to child
-          memcpy((void*)&child->user_heap, (void*)&parent->user_heap, sizeof(parent->user_heap));
-          break;
-        }
+            }
       case CODE_SEGMENT:
         // TODO (lab3_1): implment the mapping of child code segment to parent's
         // code segment.

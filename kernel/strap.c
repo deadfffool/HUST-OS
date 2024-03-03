@@ -49,24 +49,37 @@ void handle_mtimer_trap() {
 // sepc: the pc when fault happens;
 // stval: the virtual address that causes pagefault when being accessed.
 //
-void handle_user_page_fault(uint64 mcause, uint64 sepc, uint64 stval) {
+void handle_user_page_fault(uint64 mcause, uint64 sepc, uint64 stval)
+{
   sprint("handle_page_fault: %lx\n", stval);
-  switch (mcause) {
-    case CAUSE_STORE_PAGE_FAULT:
-      // TODO (lab2_3): implement the operations that solve the page fault to
-      // dynamically increase application stack.
-      // hint: first allocate a new physical page, and then, maps the new page to the
-      // virtual address that causes the page fault.
-      if(stval < USER_STACK_TOP && stval > (USER_STACK_TOP - 20 * STACK_SIZE))
-      {
-        void* pa = alloc_page();
-        user_vm_map((pagetable_t)current->pagetable,ROUNDDOWN(stval,PGSIZE), PGSIZE, (uint64)pa,prot_to_type(PROT_WRITE | PROT_READ, 1));
-      }
-      else panic("page fault needs too much space!");
-      break;
-    default:
-      sprint("unknown page fault.\n");
-      break;
+  uint64 pa;
+  switch (mcause)
+  {
+  case CAUSE_STORE_PAGE_FAULT:
+    // TODO (lab2_3): implement the operations that solve the page fault to
+    // dynamically increase application stack.
+    // hint: first allocate a new physical page, and then, maps the new page to the
+    // virtual address that causes the page fault.
+    // panic("You need to implement the operations that actually handle the page fault in lab2_3.\n");
+
+    // added on lab3_c3
+    pte_t *pte = page_walk(current->pagetable, stval, 0);
+    if(pte == NULL)  // 缺页异常
+    {
+      pa = (uint64)alloc_page(); // allocate a new physical page
+      if ((void *)pa == NULL)
+        panic("Can not allocate a new physical page.\n");
+      map_pages(current->pagetable, ROUNDDOWN(stval, PGSIZE), PGSIZE, pa, prot_to_type(PROT_READ | PROT_WRITE, 1)); // maps the new page to the virtual address that causes the page fault
+    }
+    else if(*pte & PTE_C)
+    {
+      pa = PTE2PA(*pte);
+      heap_copy_on_write(current, current->parent, pa);
+    }
+    break;
+  default:
+    sprint("unknown page fault.\n");
+    break;
   }
 }
 
