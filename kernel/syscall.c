@@ -23,7 +23,7 @@ ssize_t sys_user_print(const char* buf, size_t n) {
   // so we have to transfer it into phisical address (kernel is running in direct mapping).
   assert( current[mycpu()] );
   char* pa = (char*)user_va_to_pa((pagetable_t)(current[mycpu()]->pagetable), (void*)buf);
-  sprint("hartid = %d: %s",mycpu(), pa);
+  sprint("%s",pa);
   return 0;
 }
 
@@ -32,13 +32,13 @@ ssize_t sys_user_print(const char* buf, size_t n) {
 //
 int flag = 0;
 ssize_t sys_user_exit(uint64 code) {
-  sprint("hartid = %d: User exit with code:%d.\n",mycpu(), code);
+  sprint("hartid = %d: User exit with code: %d.\n",mycpu(), code);
   // in lab1, PKE considers only one app (one process). 
   // therefore, shutdown the system when the app calls exit()
   sync_barrier(&flag, NCPU);
   if (mycpu() == 0)
   {
-    sprint("hartid = %d: shutdown with code:%d.\n",mycpu(), code);
+    sprint("hartid = %d: shutdown with code: %d.\n",mycpu(), code);
     shutdown(code);
   }
   return 0;
@@ -49,8 +49,8 @@ ssize_t sys_user_exit(uint64 code) {
 //
 uint64 sys_user_allocate_page() {
   void* pa = alloc_page();
-  uint64 va = g_ufree_page;
-  g_ufree_page += PGSIZE;
+  uint64 va = g_ufree_page[mycpu()];
+  g_ufree_page[mycpu()] += PGSIZE;
   user_vm_map((pagetable_t)current[mycpu()]->pagetable, va, PGSIZE, (uint64)pa,
          prot_to_type(PROT_WRITE | PROT_READ, 1));
   sprint("hartid = %d: vaddr 0x%x is mapped to paddr 0x%x\n",mycpu(), va, pa);

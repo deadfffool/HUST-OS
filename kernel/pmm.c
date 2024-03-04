@@ -49,7 +49,7 @@ void *alloc_page(void) {
   // sprint("alloc %d acquire\n",mycpu());
   list_node *n = g_free_mem_list.next;
   if (vm_alloc_stage[mycpu()])
-    sprint("hartid = %d: alloc page 0x%lx\n", mycpu(), n);
+    sprint("hartid = %d: alloc page 0x%x\n", mycpu(), n);
   if (n!=0)
     g_free_mem_list.next = n->next;
   // sprint("alloc %d release\n",mycpu());
