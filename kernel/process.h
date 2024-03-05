@@ -111,5 +111,5 @@ int do_fork(process* parent);
 ssize_t do_wait(uint64 pid);
 // current running process
 extern process* current;
-void do_exec(char * filename);
+void do_exec(char * filename,char * para);
 #endif

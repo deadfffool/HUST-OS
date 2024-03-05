@@ -18,6 +18,7 @@
 #include "sched.h"
 #include "spike_interface/spike_utils.h"
 #include "elf.h"
+#include "util/string.h"
 //Two functions defined in kernel/usertrap.S
 extern char smode_trap_vector[];
 extern void return_to_user(trapframe *, uint64 satp);
@@ -329,14 +330,27 @@ process* alloc_process_without_sprint() {
   // return after initialization.
   return &temp;
 }
+
 //add_@lab4_c2
-void do_exec(char * filename)
+void do_exec(char * filename,char * argv)
 {  
   elf_info info;
   process * p = alloc_process_without_sprint();
   load_bincode_from_host_elf_name(p,filename);
-  // free_process(current);
-  // switch_to(p);
+
+  // // prepare for args
+  // uint64 argc = 0, sp = p->kstack, ustack[8];  // maxarg = 8
+  // for(argc = 0; argv[argc]; argc++) {
+  //   sp -= strlen(argv[argc]) + 1;
+  //   sp -= sp % 16; // riscv sp must be 16-byte aligned
+  //   memcpy((void*)lookup_pa(p->pagetable,sp), (void*)argv[argc], strlen(argv[argc]) + 1);
+  //   ustack[argc] = sp;
+  // }
+  // ustack[argc] = 0;
+  // sp -= (argc+1) * sizeof(uint64);
+  // sp -= sp % 16;
+  // memcpy((void*)lookup_pa(p->pagetable,sp), (void *)ustack, (argc+1)*sizeof(uint64));
+  
   current->kstack = p->kstack;
   current->pagetable = p->pagetable;
   current->trapframe = p->trapframe;
@@ -347,6 +361,21 @@ void do_exec(char * filename)
   current->queue_next = p->queue_next;
   current->tick_count = p->tick_count;
   current->pfiles = p->pfiles;
+
+  sprint("here\n");
+
+  size_t * vsp, * sp;
+  vsp = (size_t *)current->trapframe->regs.sp;
+  vsp -= 8;
+  sp = (size_t *)user_va_to_pa(current->pagetable, (void*)vsp);
+  memcpy((char *)sp, argv, 1+strlen(argv));
+  vsp--;sp--;
+  * sp = (uint64)(1+vsp);
+
+  current->trapframe->regs.sp = (uint64)vsp;
+  current->trapframe->regs.a1 = (uint64)vsp;
+  current->trapframe->regs.a0 = (uint64)1;
+
   switch_to(current);
 }
 

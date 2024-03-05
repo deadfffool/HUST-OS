@@ -225,11 +225,13 @@ ssize_t sys_user_unlink(char * vfn){
 //
 // exec
 //
-uint64 sys_user_exec(char * filename)
+uint64 sys_user_exec(char * filename, char * para)
 {
-  char * file_name = (char*)user_va_to_pa((pagetable_t)(current->pagetable), filename);
-  // sprint("%s\n",file_name);
-  do_exec(file_name);
+  char * file_name;
+  char * para_;
+  file_name = (char*)user_va_to_pa((pagetable_t)(current->pagetable), filename);
+  para_ = (char*)user_va_to_pa((pagetable_t)(current->pagetable), para);
+  do_exec(file_name,para_);
   return -1;
 }
 
@@ -284,7 +286,7 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
     case SYS_user_unlink:
       return sys_user_unlink((char *)a1);
     case SYS_user_exec:
-      return sys_user_exec((char *)a1);
+      return sys_user_exec((char *)a1, (char *)a2);
     default:
       panic("Unknown syscall %ld \n", a0);
   }

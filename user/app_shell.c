@@ -7,7 +7,7 @@
 #include "string.h"
 #include "util/types.h"
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) { //char **
   printu("\n======== Shell Start ========\n\n");
   int fd;
   int MAXBUF = 1024;
@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
     printu("==========Command Start============\n\n");
     int pid = fork();
     if(pid == 0) {
-      int ret = exec(command, para);
+      int ret = exec(command, para); //para char *
       if (ret == -1)
       printu("exec failed!\n");
     }

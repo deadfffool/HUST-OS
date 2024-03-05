@@ -161,10 +161,9 @@ void *user_va_to_pa(pagetable_t page_dir, void *va) {
   // invalid PTE, and should return NULL.
 
   // starting from the page directory
-  uint64 pa,val;
-  val = (uint64)va;
-  pa = lookup_pa(page_dir,val);
-  pa = pa + (val & ((1 << PGSHIFT) - 1));
+  uint64 pa;
+  pa = lookup_pa(page_dir, (uint64)va);
+  pa = pa + ((uint64)va & ((1 << PGSHIFT) - 1));
   return (void*)pa;
 }
 
