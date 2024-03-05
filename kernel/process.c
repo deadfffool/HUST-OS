@@ -361,9 +361,7 @@ void do_exec(char * filename,char * argv)
   current->queue_next = p->queue_next;
   current->tick_count = p->tick_count;
   current->pfiles = p->pfiles;
-
-  sprint("here\n");
-
+  
   size_t * vsp, * sp;
   vsp = (size_t *)current->trapframe->regs.sp;
   vsp -= 8;
