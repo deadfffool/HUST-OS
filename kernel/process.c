@@ -17,7 +17,7 @@
 #include "memlayout.h"
 #include "sched.h"
 #include "spike_interface/spike_utils.h"
-
+#include "elf.h"
 //Two functions defined in kernel/usertrap.S
 extern char smode_trap_vector[];
 extern void return_to_user(trapframe *, uint64 satp);
@@ -28,7 +28,7 @@ extern char trap_sec_start[];
 
 // process pool. added @lab3_1
 process procs[NPROC];
-
+process temp;
 // current points to the currently running user-mode application.
 process* current = NULL;
 
@@ -188,14 +188,14 @@ int do_fork( process* parent)
     // browse parent's vm space, and copy its trapframe and data segments,
     // map its code segment.
     switch( parent->mapped_info[i].seg_type ){
-      case CONTEXT_SEGMENT:
+      case CONTEXT_SEGMENT:{
         *child->trapframe = *parent->trapframe;
-        break;
-      case STACK_SEGMENT:
+        break;}
+      case STACK_SEGMENT:{
         memcpy( (void*)lookup_pa(child->pagetable, child->mapped_info[STACK_SEGMENT].va),
           (void*)lookup_pa(parent->pagetable, parent->mapped_info[i].va), PGSIZE );
-        break;
-      case HEAP_SEGMENT:
+        break;}
+      case HEAP_SEGMENT:{
         // build a same heap for child process.
 
         // convert free_pages_address into a filter to skip reclaimed blocks in the heap
@@ -224,8 +224,8 @@ int do_fork( process* parent)
 
         // copy the heap manager from parent to child
         memcpy((void*)&child->user_heap, (void*)&parent->user_heap, sizeof(parent->user_heap));
-        break;
-      case CODE_SEGMENT:
+        break;}
+      case CODE_SEGMENT:{
         // TODO (lab3_1): implment the mapping of child code segment to parent's
         // code segment.
         // hint: the virtual address mapping of code segment is tracked in mapped_info
@@ -246,6 +246,20 @@ int do_fork( process* parent)
         child->mapped_info[child->total_mapped_region].seg_type = CODE_SEGMENT;
         child->total_mapped_region++;
         break;
+      case DATA_SEGMENT:
+        for(int j =0;j< parent->mapped_info[i].npages;j++)
+        {
+          // alloc and copy
+          uint64 addr = lookup_pa(parent->pagetable, parent->mapped_info[i].va+j*PGSIZE);
+          char *new = alloc_page();
+          memcpy(new, (void *)addr, PGSIZE);
+          map_pages(child->pagetable, parent->mapped_info[i].va+j*PGSIZE, PGSIZE,(uint64)new, prot_to_type(PROT_WRITE | PROT_READ, 1));
+        }
+        child->mapped_info[i].npages = parent->mapped_info[i].npages;
+        child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
+        child->mapped_info[child->total_mapped_region].seg_type = DATA_SEGMENT;
+        child->total_mapped_region++;
+        break;}
     }
   }
 
@@ -255,4 +269,139 @@ int do_fork( process* parent)
   insert_to_ready_queue( child );
 
   return child->pid;
+}
+
+//add_@lab4_c2
+process* alloc_process_without_sprint() {
+  // locate the first usable process structure
+  // init proc[i]'s vm space
+  temp.trapframe = (trapframe *)alloc_page();  //trapframe, used to save context
+  memset(temp.trapframe, 0, sizeof(trapframe));
+
+  // page directory
+  temp.pagetable = (pagetable_t)alloc_page();
+  memset((void *)temp.pagetable, 0, PGSIZE);
+
+  temp.kstack = (uint64)alloc_page() + PGSIZE;   //user kernel stack top
+  uint64 user_stack = (uint64)alloc_page();       //phisical address of user stack bottom
+  temp.trapframe->regs.sp = USER_STACK_TOP;  //virtual address of user stack top
+
+  // allocates a page to record memory regions (segments)
+  temp.mapped_info = (mapped_region*)alloc_page();
+  memset( temp.mapped_info, 0, PGSIZE );
+
+  // map user stack in userspace
+  user_vm_map((pagetable_t)temp.pagetable, USER_STACK_TOP - PGSIZE, PGSIZE,
+    user_stack, prot_to_type(PROT_WRITE | PROT_READ, 1));
+  temp.mapped_info[STACK_SEGMENT].va = USER_STACK_TOP - PGSIZE;
+  temp.mapped_info[STACK_SEGMENT].npages = 1;
+  temp.mapped_info[STACK_SEGMENT].seg_type = STACK_SEGMENT;
+
+  // map trapframe in user space (direct mapping as in kernel space).
+  user_vm_map((pagetable_t)temp.pagetable, (uint64)temp.trapframe, PGSIZE,
+    (uint64)temp.trapframe, prot_to_type(PROT_WRITE | PROT_READ, 0));
+  temp.mapped_info[CONTEXT_SEGMENT].va = (uint64)temp.trapframe;
+  temp.mapped_info[CONTEXT_SEGMENT].npages = 1;
+  temp.mapped_info[CONTEXT_SEGMENT].seg_type = CONTEXT_SEGMENT;
+
+  // map S-mode trap vector section in user space (direct mapping as in kernel space)
+  // we assume that the size of usertrap.S is smaller than a page.
+  user_vm_map((pagetable_t)temp.pagetable, (uint64)trap_sec_start, PGSIZE,
+    (uint64)trap_sec_start, prot_to_type(PROT_READ | PROT_EXEC, 0));
+  temp.mapped_info[SYSTEM_SEGMENT].va = (uint64)trap_sec_start;
+  temp.mapped_info[SYSTEM_SEGMENT].npages = 1;
+  temp.mapped_info[SYSTEM_SEGMENT].seg_type = SYSTEM_SEGMENT;
+
+  // initialize the process's heap manager
+  temp.user_heap.heap_top = USER_FREE_ADDRESS_START;
+  temp.user_heap.heap_bottom = USER_FREE_ADDRESS_START;
+  temp.user_heap.free_pages_count = 0;
+
+  // map user heap in userspace
+  temp.mapped_info[HEAP_SEGMENT].va = USER_FREE_ADDRESS_START;
+  temp.mapped_info[HEAP_SEGMENT].npages = 0;  // no pages are mapped to heap yet.
+  temp.mapped_info[HEAP_SEGMENT].seg_type = HEAP_SEGMENT;
+
+  temp.total_mapped_region = 4;
+
+  // initialize files_struct
+  temp.pfiles = init_proc_file_management();
+  // return after initialization.
+  return &temp;
+}
+//add_@lab4_c2
+void do_exec(char * filename)
+{  
+  elf_info info;
+  process * p = alloc_process_without_sprint();
+  load_bincode_from_host_elf_name(p,filename);
+  // free_process(current);
+  // switch_to(p);
+  current->kstack = p->kstack;
+  current->pagetable = p->pagetable;
+  current->trapframe = p->trapframe;
+  current->total_mapped_region = p->total_mapped_region;
+  current->mapped_info = p->mapped_info;
+  current->user_heap = p->user_heap;
+  current->parent = p->parent;
+  current->queue_next = p->queue_next;
+  current->tick_count = p->tick_count;
+  current->pfiles = p->pfiles;
+  switch_to(current);
+}
+
+ssize_t do_wait(uint64 pid)
+{
+  int flag = 0;
+  uint64 child_pid;
+  if (pid == -1)
+  {
+    //search
+    for(int i = 0;i<NPROC;i++)
+    {
+      if (procs[i].parent == current)
+      {
+        flag = 1 ;
+        child_pid = procs[i].pid;
+        if (procs[i].status == ZOMBIE)
+        {
+          procs[i].status = FREE;
+          return i;
+        }
+      }
+    }
+    // if it is running 
+    if(flag == 0) return -1;
+    else 
+    {
+      current->mark=child_pid;
+      insert_to_blocked_queue(current);
+      schedule();
+      return -2;
+    }
+  }
+  else
+  {     
+    for(int i = 0;i<NPROC;i++)
+    {
+      if (procs[i].pid == pid)
+      {
+        flag = 1;
+        child_pid = procs[i].pid;
+        if (procs[pid].status == ZOMBIE) 
+        {
+          procs[pid].status = FREE;
+          return pid;
+        }
+      }
+    }
+    if(flag == 0) return -1;
+    else
+    {
+      current->mark = child_pid;
+      insert_to_blocked_queue(current);
+      schedule();
+      return -2;
+    }
+  }
 }

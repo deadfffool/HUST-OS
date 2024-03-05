@@ -13,6 +13,8 @@ void* naive_malloc();
 void naive_free(void* va);
 int fork();
 void yield();
+// added @ lab3_c1
+void wait();
 
 // added @ lab4_1
 int open(const char *pathname, int flags);
@@ -33,5 +35,6 @@ int closedir_u(int fd);
 int link_u(const char *fn1, const char *fn2);
 int unlink_u(const char *fn);
 
-
+// added @ lab4_c2
+int exec(const char *filename);
 #endif

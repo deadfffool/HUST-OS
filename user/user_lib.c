@@ -167,3 +167,14 @@ int unlink_u(const char *fn){
 int close(int fd) {
   return do_user_call(SYS_user_close, fd, 0, 0, 0, 0, 0, 0);
 }
+
+// added @lab3_c1
+void wait(uint64 a)
+{
+  do_user_call(SYS_user_wait,a,0,0,0,0,0,0);
+}
+
+// added @ lab4_c2
+int exec(const char *filename){
+  return do_user_call(SYS_user_exec, (uint64)filename, 0, 0, 0, 0, 0, 0);
+}

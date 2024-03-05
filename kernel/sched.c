@@ -6,6 +6,8 @@
 #include "spike_interface/spike_utils.h"
 
 process* ready_queue_head = NULL;
+process* blocked_queue_head = NULL;
+extern process procs[NPROC];
 
 //
 // insert a process, proc, into the END of ready queue.
@@ -35,6 +37,45 @@ void insert_to_ready_queue( process* proc ) {
   return;
 }
 
+void insert_to_blocked_queue( process *proc) 
+{
+  if( blocked_queue_head == NULL ){
+    proc->status = BLOCKED;
+    proc->block_next = NULL;
+    blocked_queue_head = proc;
+    return;
+  }
+  // blocked queue is not empty
+  process *p;
+  // browse the blocked queue to see if proc is already in-queue
+  for( p=blocked_queue_head; p->block_next!=NULL; p=p->block_next )
+    if( p == proc ) return;  //already in queue
+
+  // p points to the last element of the blocked queue
+  if( p==proc ) return;
+
+  p->block_next = proc;
+  proc->status = BLOCKED;
+  proc->block_next = NULL;
+  return;
+}
+
+void wakeup_blocked(process* proc)
+{
+  process* p,* temp;
+  if(blocked_queue_head == proc)
+    blocked_queue_head = blocked_queue_head->block_next;
+  else
+  {
+    for(p=blocked_queue_head;p->block_next!=NULL; p=p->block_next)
+      if(p->block_next == proc)
+      {
+        temp = p->block_next->block_next;
+        p->block_next = temp;
+        break;
+      }  
+  }
+}
 //
 // choose a proc from the ready queue, and put it to run.
 // note: schedule() does not take care of previous current process. If the current
@@ -43,6 +84,19 @@ void insert_to_ready_queue( process* proc ) {
 //
 extern process procs[NPROC];
 void schedule() {
+  if ( blocked_queue_head )
+  {
+    // sprint("try to find %d\n",blocked_queue_head->mark);
+    process *p;
+    for( p=blocked_queue_head; p!=NULL; p=p->block_next )
+    {
+      if(procs[p->mark].status == ZOMBIE)
+      {
+        insert_to_ready_queue(p);
+        wakeup_blocked(p);
+      }
+    }
+  }
   if ( !ready_queue_head ){
     // by default, if there are no ready process, and all processes are in the status of
     // FREE and ZOMBIE, we should shutdown the emulated RISC-V machine.
