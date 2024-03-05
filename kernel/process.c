@@ -326,7 +326,7 @@ process* alloc_process_without_sprint() {
   temp.total_mapped_region = 4;
 
   // initialize files_struct
-  temp.pfiles = init_proc_file_management();
+  temp.pfiles = init_proc_file_management_name();
   // return after initialization.
   return &temp;
 }
@@ -361,7 +361,7 @@ void do_exec(char * filename,char * argv)
   current->queue_next = p->queue_next;
   current->tick_count = p->tick_count;
   current->pfiles = p->pfiles;
-  
+
   size_t * vsp, * sp;
   vsp = (size_t *)current->trapframe->regs.sp;
   vsp -= 8;
