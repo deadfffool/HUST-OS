@@ -61,7 +61,7 @@ typedef struct elf_ctx_t {
 } elf_ctx;
 
 typedef struct elf_info_t {
-  spike_file_t *f;
+  struct file *f;
   process *p;
 } elf_info;
 
