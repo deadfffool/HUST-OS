@@ -16,6 +16,9 @@
 #define SYS_user_yield (SYS_user_base + 5)
 // added @lab3_c1
 #define SYS_user_wait (SYS_user_base + 6)
+// added @lab1_c1
+#define SYS_user_backtrace (SYS_user_base + 7)
+
 // added @lab4_1
 #define SYS_user_open (SYS_user_base + 17)
 #define SYS_user_read (SYS_user_base + 18)

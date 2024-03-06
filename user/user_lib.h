@@ -9,6 +9,8 @@
 
 int printu(const char *s, ...);
 int exit(int code);
+// added @ lab1_c1
+int print_backtrace(int n);
 void* naive_malloc();
 void naive_free(void* va);
 int fork();

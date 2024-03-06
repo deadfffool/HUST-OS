@@ -5,6 +5,8 @@
 #include "process.h"
 
 #define MAX_CMDLINE_ARGS 64
+#define STT_FUNC  2    //st_info
+#define STB_GLOBAL (1<<4)   //st_info
 
 // elf header structure
 typedef struct elf_header_t {
@@ -24,6 +26,29 @@ typedef struct elf_header_t {
   uint16 shnum;     /* Section header table entry count */
   uint16 shstrndx;  /* Section header string table index */
 } elf_header;
+
+typedef struct elf_sect_header_t {
+  uint32 sh_name;		  /* Section name, index in string tbl */
+  uint32 sh_type;		  /* Type of section */
+  uint64 sh_flags;		/* Miscellaneous section attributes */
+  uint64 sh_addr;		  /* Section virtual addr at execution */
+  uint64 sh_offset;		/* Section file offset */
+  uint64 sh_size;		  /* Size of section in bytes */
+  uint32 sh_link;		  /* Index of another section */
+  uint32 sh_info;		  /* Additional section information */
+  uint64 sh_addralign;/* Section alignment */
+  uint64 sh_entsize;	/* Entry size if section holds table */
+} elf_sect_header;
+
+// elf symbol table structure
+typedef struct elf_sym_t {
+  uint32   st_name;
+  uint8    st_info;      /* the type of symbol */
+  uint8    st_other;
+  uint16   st_shndx;
+  uint64   st_value;     // address maybe
+  uint64   st_size;
+} elf_sym;
 
 // segment types, attributes of elf_prog_header_t.flags
 #define SEGMENT_READABLE   0x4
@@ -65,9 +90,17 @@ typedef struct elf_info_t {
   process *p;
 } elf_info;
 
+
+typedef struct symbol_tab{
+	char name[16];
+	uint64 off;
+} Symbols;
+
 elf_status elf_init(elf_ctx *ctx, void *info);
 elf_status elf_load(elf_ctx *ctx);
 
 void load_bincode_from_host_elf(process *p, char *filename);
 void load_bincode_from_host_elf_name(process *p,char *filename);
+void bubble_sort(Symbols arr[], int n);
+void load_func_name(elf_ctx *ctx);
 #endif

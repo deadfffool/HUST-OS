@@ -170,10 +170,15 @@ int close(int fd) {
 
 // added @lab3_c1
 void wait(uint64 a){
-  do_user_call(SYS_user_wait,a,0,0,0,0,0,0);
+  do_user_call(SYS_user_wait, a, 0, 0, 0, 0, 0, 0);
 }
 
-// added @ lab4_c2
+// added @lab4_c2
 int exec(const char *filename, const char * para){
   return do_user_call(SYS_user_exec, (uint64)filename, (uint64)para, 0, 0, 0, 0, 0);
+}
+
+// added @lab1_c1
+int print_backtrace(int n){
+  return do_user_call(SYS_user_backtrace, n, 0, 0, 0, 0, 0, 0);
 }

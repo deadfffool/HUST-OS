@@ -14,8 +14,12 @@
 #include "vmm.h"
 #include "sched.h"
 #include "proc_file.h"
+#include "elf.h"
 
 #include "spike_interface/spike_utils.h"
+
+extern Symbols symbols[64];
+extern int count;
 
 //
 // implement the SYS_user_print syscall
@@ -235,6 +239,29 @@ uint64 sys_user_exec(char * filename, char * para)
   return -1;
 }
 
+// added @lab1c1
+ssize_t sys_user_backtrace(uint64 n){
+  // uint64 current_fp =(current->trapframe->regs.s0+16);
+  // int i = 0;
+  // for (i;i<n;i++)
+  // {
+    // sprint("fp%d:0x%x\n",i,*(uint64*)(current_fp-8)); 
+    // uint64 code = *(uint64*)(current_fp-8);
+    int j;
+    for(j=count-1;j>count-2-n;j--){
+      // if (symbols[j+1].off<code && code<symbols[j].off)
+        sprint("%s\n",symbols[j+1].name);
+    }
+    // current_fp = *(uint64*)(current_fp-16);  
+  // }
+
+  // int i = 0;
+  // for(i=0;i<count;i++)
+  //   sprint("0x%lx    %s\n",symbols[i].off,symbols[i].name);
+
+  return 0;
+}
+
 //
 // [a0]: the syscall number; [a1] ... [a7]: arguments to the syscalls.
 // returns the code of success, (e.g., 0 means success, fail for otherwise)
@@ -287,6 +314,8 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
       return sys_user_unlink((char *)a1);
     case SYS_user_exec:
       return sys_user_exec((char *)a1, (char *)a2);
+    case SYS_user_backtrace:
+      return sys_user_backtrace(a1);
     default:
       panic("Unknown syscall %ld \n", a0);
   }
