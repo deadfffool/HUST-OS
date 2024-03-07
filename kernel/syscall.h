@@ -37,6 +37,10 @@
 #define SYS_user_unlink (SYS_user_base + 29)
 // added @lab4_c2
 #define SYS_user_exec  (SYS_user_base + 30)
+// added @lab4_challenge 1
+#define SYS_user_rcwd   (SYS_user_base + 31)
+#define SYS_user_ccwd   (SYS_user_base + 32)
+
 long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, long a7);
 
 #endif

@@ -112,7 +112,26 @@ ssize_t sys_user_wait(long pid) {
 //
 ssize_t sys_user_open(char *pathva, int flags) {
   char* pathpa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), pathva);
-  return do_open(pathpa, flags);
+  char resultpath[256];
+  if(*pathpa == '.' && *(pathpa+1) != '.')
+  {
+    strcpy(resultpath,current->pfiles->cwd->name);
+    if(!strcmp(resultpath,"/")) *resultpath=0;
+    strcat(resultpath,(pathpa+1));
+  }
+  else if( *pathpa == '.' && *(pathpa+1) == '.')
+  {
+    if(current->pfiles->cwd->parent){
+      strcpy(resultpath,current->pfiles->cwd->parent->name);
+      if(!strcmp(resultpath,"/")) *resultpath=0;
+      strcat(resultpath,(pathpa+2));
+    }else
+      strcpy(resultpath,"/");
+  }
+  else
+    strcpy(resultpath,pathpa);
+
+  return do_open(resultpath, flags);
 }
 
 //
@@ -262,6 +281,36 @@ ssize_t sys_user_backtrace(uint64 n){
   return 0;
 }
 
+ssize_t sys_user_rcwd(char *path){
+  strcpy((char*)user_va_to_pa((pagetable_t)current->pagetable,path),current->pfiles->cwd->name);
+  return 0;
+}
+
+ssize_t sys_user_ccwd(char *path){
+  char resultpath[256];
+  char* pathpa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), path);
+  if(*pathpa == '.' && *(pathpa+1) != '.')
+  {
+    strcpy(resultpath,current->pfiles->cwd->name);
+    if(!strcmp(resultpath,"/")) *resultpath=0; 
+    strcat(resultpath,(pathpa+1));
+  }
+  else if( *pathpa == '.' && *(pathpa+1) == '.')
+  {
+    if(current->pfiles->cwd->parent){
+      strcpy(resultpath,current->pfiles->cwd->parent->name);
+      if(!strcmp(resultpath,"/")) *resultpath=0; //ignore the "/"
+      strcat(resultpath,pathpa);
+    }else
+      strcpy(resultpath,"/");
+  }
+  else
+    strcpy(resultpath,pathpa);
+  if((ssize_t)strcpy(current->pfiles->cwd->name,resultpath)==0) 
+    return -1;
+  return 0;
+}
+
 //
 // [a0]: the syscall number; [a1] ... [a7]: arguments to the syscalls.
 // returns the code of success, (e.g., 0 means success, fail for otherwise)
@@ -316,6 +365,11 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
       return sys_user_exec((char *)a1, (char *)a2);
     case SYS_user_backtrace:
       return sys_user_backtrace(a1);
+    // added @lab4_challenge 1
+    case SYS_user_rcwd:
+      return sys_user_rcwd((char *)a1);
+    case SYS_user_ccwd:
+      return sys_user_ccwd((char *)a1);
     default:
       panic("Unknown syscall %ld \n", a0);
   }

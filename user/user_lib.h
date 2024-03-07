@@ -39,4 +39,8 @@ int unlink_u(const char *fn);
 
 // added @ lab4_c2
 int exec(const char *filename, const char * para);
+
+// added @ lab4_c1
+int read_cwd(char *path);
+int change_cwd(const char *path);
 #endif

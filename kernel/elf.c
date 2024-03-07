@@ -215,8 +215,8 @@ void load_func_name(elf_ctx *ctx)
       elf_fpread(ctx, (void*)&symname, sizeof(symname), str_sect_off+symbol.st_name); //里面应该自己有\0
       symbols[count].off = symbol.st_value;
       strcpy(symbols[count].name, symname);
-      sprint("%s\n",symbols[count].name);
-      sprint("0x%lx\n",symbols[count].off);
+      // sprint("%s\n",symbols[count].name);
+      // sprint("0x%lx\n",symbols[count].off);
       count++;
     }
   }

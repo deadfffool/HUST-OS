@@ -5,6 +5,8 @@
 /bin/app_cat /RAMDISK0/sub_dir/ramfile1
 /bin/app_ls /RAMDISK0/sub_dir
 /bin/app_ls /RAMDISK0
-END END
-
 /bin/app_backtrace
+/bin/app_sum
+
+END END END
+

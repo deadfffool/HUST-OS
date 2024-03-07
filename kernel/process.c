@@ -361,19 +361,23 @@ void do_exec(char * filename,char * argv)
   current->queue_next = p->queue_next;
   current->tick_count = p->tick_count;
   current->pfiles = p->pfiles;
+  
+  if(argv[0] == ' ')
+   switch_to(current);
+  else
+  {
+    size_t * vsp, * sp;
+    vsp = (size_t *)current->trapframe->regs.sp;
+    vsp -= 8;
+    sp = (size_t *)user_va_to_pa(current->pagetable, (void*)vsp);
+    memcpy((char *)sp, argv, 1+strlen(argv));
+    vsp--;sp--;
+    * sp = (uint64)(1+vsp);
 
-  size_t * vsp, * sp;
-  vsp = (size_t *)current->trapframe->regs.sp;
-  vsp -= 8;
-  sp = (size_t *)user_va_to_pa(current->pagetable, (void*)vsp);
-  memcpy((char *)sp, argv, 1+strlen(argv));
-  vsp--;sp--;
-  * sp = (uint64)(1+vsp);
-
-  current->trapframe->regs.sp = (uint64)vsp;
-  current->trapframe->regs.a1 = (uint64)vsp;
-  current->trapframe->regs.a0 = (uint64)1;
-
+    current->trapframe->regs.sp = (uint64)vsp;
+    current->trapframe->regs.a1 = (uint64)vsp;
+    current->trapframe->regs.a0 = (uint64)1;
+  }
   switch_to(current);
 }
 
