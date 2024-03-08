@@ -311,6 +311,52 @@ ssize_t sys_user_ccwd(char *path){
   return 0;
 }
 
+
+// added lab2_c2
+uint64 sys_user_malloc(uint64 size) {
+  uint64 va = better_alloc(size);
+  return va;
+}
+
+uint64 sys_user_free(uint64 va) {
+  better_free(va);
+  return 0;
+}
+
+//added @lab3_challenge2  sem_new
+long sys_user_sem_new(int resource)
+{
+  //allocate a signal to current process's semaphore
+  //and assign an initial value
+  return do_sem_new(resource);
+  
+}
+
+//added @lab3_challenge2 sem_P
+long sys_user_sem_P(int mutex)
+{
+  //P operation
+  do_sem_P(mutex);
+  return 0;
+}
+
+
+//added @lab3_challenge2 sem_V
+long sys_user_sem_V(int mutex)
+{
+  //V operation
+  do_sem_V(mutex);
+  return 0;
+}
+
+// added lab3c3
+ssize_t sys_user_printpa(uint64 va)
+{
+  uint64 pa = (uint64)user_va_to_pa((pagetable_t)(current->pagetable), (void*)va);
+  sprint("%lx\n", pa);
+  return 0;
+}
+
 //
 // [a0]: the syscall number; [a1] ... [a7]: arguments to the syscalls.
 // returns the code of success, (e.g., 0 means success, fail for otherwise)
@@ -321,7 +367,6 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
       return sys_user_print((const char*)a1, a2);
     case SYS_user_exit:
       return sys_user_exit(a1);
-    // added @lab2_2
     case SYS_user_allocate_page:
       return sys_user_allocate_page();
     case SYS_user_free_page:
@@ -332,7 +377,6 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
       return sys_user_yield();
     case SYS_user_wait:
       return sys_user_wait(a1);
-    // added @lab4_1
     case SYS_user_open:
       return sys_user_open((char *)a1, a2);
     case SYS_user_read:
@@ -347,7 +391,6 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
       return sys_user_disk_stat(a1, (struct istat *)a2);
     case SYS_user_close:
       return sys_user_close(a1);
-    // added @lab4_2
     case SYS_user_opendir:
       return sys_user_opendir((char *)a1);
     case SYS_user_readdir:
@@ -356,7 +399,6 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
       return sys_user_mkdir((char *)a1);
     case SYS_user_closedir:
       return sys_user_closedir(a1);
-    // added @lab4_3
     case SYS_user_link:
       return sys_user_link((char *)a1, (char *)a2);
     case SYS_user_unlink:
@@ -365,11 +407,22 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
       return sys_user_exec((char *)a1, (char *)a2);
     case SYS_user_backtrace:
       return sys_user_backtrace(a1);
-    // added @lab4_challenge 1
     case SYS_user_rcwd:
       return sys_user_rcwd((char *)a1);
     case SYS_user_ccwd:
       return sys_user_ccwd((char *)a1);
+    case SYS_user_malloc:
+      return sys_user_malloc(a1);
+    case SYS_user_free:
+      return sys_user_free(a1);
+    case SYS_user_sem_new:
+      return sys_user_sem_new(a1);
+    case SYS_user_sem_P:
+      return sys_user_sem_P(a1);
+    case SYS_user_sem_V:
+      return sys_user_sem_V(a1);  
+    case SYS_user_printpa:
+      return sys_user_printpa(a1);
     default:
       panic("Unknown syscall %ld \n", a0);
   }

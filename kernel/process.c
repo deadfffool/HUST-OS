@@ -19,6 +19,8 @@
 #include "spike_interface/spike_utils.h"
 #include "elf.h"
 #include "util/string.h"
+#include "util/functions.h"
+
 //Two functions defined in kernel/usertrap.S
 extern char smode_trap_vector[];
 extern void return_to_user(trapframe *, uint64 satp);
@@ -32,7 +34,10 @@ process procs[NPROC];
 process temp;
 // current points to the currently running user-mode application.
 process* current = NULL;
+uint64 g_ufree_page = USER_FREE_ADDRESS_START;
 
+int cur=0;
+semphore signal[SEM_MAX];
 //
 // switch to a user-mode process
 //
@@ -189,78 +194,65 @@ int do_fork( process* parent)
     // browse parent's vm space, and copy its trapframe and data segments,
     // map its code segment.
     switch( parent->mapped_info[i].seg_type ){
-      case CONTEXT_SEGMENT:{
+      case CONTEXT_SEGMENT:
         *child->trapframe = *parent->trapframe;
-        break;}
-      case STACK_SEGMENT:{
+        break;
+      case STACK_SEGMENT:
         memcpy( (void*)lookup_pa(child->pagetable, child->mapped_info[STACK_SEGMENT].va),
           (void*)lookup_pa(parent->pagetable, parent->mapped_info[i].va), PGSIZE );
-        break;}
-      case HEAP_SEGMENT:{
-        // build a same heap for child process.
-
-        // convert free_pages_address into a filter to skip reclaimed blocks in the heap
-        // when mapping the heap blocks
-        int free_block_filter[MAX_HEAP_PAGES];
-        memset(free_block_filter, 0, MAX_HEAP_PAGES);
-        uint64 heap_bottom = parent->user_heap.heap_bottom;
-        for (int i = 0; i < parent->user_heap.free_pages_count; i++) {
-          int index = (parent->user_heap.free_pages_address[i] - heap_bottom) / PGSIZE;
-          free_block_filter[index] = 1;
+        break;
+      case HEAP_SEGMENT:
+      {
+        for (uint64 heap_block = current->user_heap.heap_bottom; heap_block < current->user_heap.heap_top; heap_block += PGSIZE) 
+        {
+          uint64 parent_pa = lookup_pa(parent->pagetable, heap_block);
+          // 直接映射
+          user_vm_map((pagetable_t)child->pagetable, heap_block, PGSIZE, parent_pa,
+                      prot_to_type(PROT_READ, 1));
+          // pte
+          pte_t *child_pte = page_walk(child->pagetable, heap_block, 0);
+          if(child_pte == NULL)
+            panic("error when mapping heap segment!");
+          *child_pte &= (~PTE_W);
+          *child_pte |= PTE_C; 
+          pte_t *parent_pte = page_walk(parent->pagetable, heap_block, 0);
+          if(parent_pte == NULL)
+            panic("error when mapping heap segment!");
+          *parent_pte &= (~PTE_W);
+          *parent_pte |= PTE_C; 
         }
-
-        // copy and map the heap blocks
-        for (uint64 heap_block = current->user_heap.heap_bottom;
-             heap_block < current->user_heap.heap_top; heap_block += PGSIZE) {
-          if (free_block_filter[(heap_block - heap_bottom) / PGSIZE])  // skip free blocks
-            continue;
-
-          void* child_pa = alloc_page();
-          memcpy(child_pa, (void*)lookup_pa(parent->pagetable, heap_block), PGSIZE);
-          user_vm_map((pagetable_t)child->pagetable, heap_block, PGSIZE, (uint64)child_pa,
-                      prot_to_type(PROT_WRITE | PROT_READ, 1));
-        }
-
         child->mapped_info[HEAP_SEGMENT].npages = parent->mapped_info[HEAP_SEGMENT].npages;
-
-        // copy the heap manager from parent to child
         memcpy((void*)&child->user_heap, (void*)&parent->user_heap, sizeof(parent->user_heap));
-        break;}
-      case CODE_SEGMENT:{
-        // TODO (lab3_1): implment the mapping of child code segment to parent's
-        // code segment.
-        // hint: the virtual address mapping of code segment is tracked in mapped_info
-        // page of parent's process structure. use the information in mapped_info to
-        // retrieve the virtual to physical mapping of code segment.
-        // after having the mapping information, just map the corresponding virtual
-        // address region of child to the physical pages that actually store the code
-        // segment of parent process.
-        // DO NOT COPY THE PHYSICAL PAGES, JUST MAP THEM.
-        uint64 pa = lookup_pa(parent->pagetable, parent->mapped_info[i].va);
-        user_vm_map(child->pagetable, parent->mapped_info[i].va, PGSIZE, pa, prot_to_type(PROT_READ | PROT_EXEC, 1));
-        sprint("do_fork map code segment at pa:%lx of parent to child at va:%lx.\n", pa, parent->mapped_info[i].va);
-
-        // after mapping, register the vm region (do not delete codes below!)
+        break;
+      } 
+      case CODE_SEGMENT:
+      {
+        for (int j = 0; j < parent->mapped_info[i].npages; j++)
+        {
+          uint64 addr = lookup_pa(parent->pagetable, parent->mapped_info[i].va + j * PGSIZE);
+          // code segment and data segment are shared by parents and child
+          map_pages(child->pagetable, parent->mapped_info[i].va + j * PGSIZE, PGSIZE, addr, prot_to_type(PROT_READ | PROT_EXEC, 1));
+          sprint("do_fork map code segment at pa:%lx of parent to child at va:%lx.\n", addr, parent->mapped_info[i].va + j * PGSIZE);
+        }
         child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
-        child->mapped_info[child->total_mapped_region].npages =
-          parent->mapped_info[i].npages;
+        child->mapped_info[child->total_mapped_region].npages = parent->mapped_info[i].npages;
         child->mapped_info[child->total_mapped_region].seg_type = CODE_SEGMENT;
         child->total_mapped_region++;
         break;
+      }
       case DATA_SEGMENT:
-        for(int j =0;j< parent->mapped_info[i].npages;j++)
+      {
+        for (int j = 0; j < parent->mapped_info[i].npages; j++)
         {
-          // alloc and copy
-          uint64 addr = lookup_pa(parent->pagetable, parent->mapped_info[i].va+j*PGSIZE);
-          char *new = alloc_page();
-          memcpy(new, (void *)addr, PGSIZE);
-          map_pages(child->pagetable, parent->mapped_info[i].va+j*PGSIZE, PGSIZE,(uint64)new, prot_to_type(PROT_WRITE | PROT_READ, 1));
+          uint64 addr = lookup_pa(parent->pagetable, parent->mapped_info[i].va + j * PGSIZE);
+          map_pages(child->pagetable, parent->mapped_info[i].va + j * PGSIZE, PGSIZE, addr, prot_to_type(PROT_READ, 1)); 
         }
-        child->mapped_info[i].npages = parent->mapped_info[i].npages;
         child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
+        child->mapped_info[child->total_mapped_region].npages = parent->mapped_info[i].npages;
         child->mapped_info[child->total_mapped_region].seg_type = DATA_SEGMENT;
         child->total_mapped_region++;
-        break;}
+        break;
+      }
     }
   }
 
@@ -337,7 +329,6 @@ void do_exec(char * filename,char * argv)
   elf_info info;
   process * p = alloc_process_without_sprint();
   load_bincode_from_host_elf_name(p,filename);
-
   // // prepare for args
   // uint64 argc = 0, sp = p->kstack, ustack[8];  // maxarg = 8
   // for(argc = 0; argv[argc]; argc++) {
@@ -362,22 +353,25 @@ void do_exec(char * filename,char * argv)
   current->tick_count = p->tick_count;
   current->pfiles = p->pfiles;
   
-  if(argv[0] == ' ')
-   switch_to(current);
-  else
-  {
-    size_t * vsp, * sp;
-    vsp = (size_t *)current->trapframe->regs.sp;
-    vsp -= 8;
-    sp = (size_t *)user_va_to_pa(current->pagetable, (void*)vsp);
-    memcpy((char *)sp, argv, 1+strlen(argv));
-    vsp--;sp--;
-    * sp = (uint64)(1+vsp);
+  void * pa = alloc_page();
+  uint64 va = g_ufree_page;
+  g_ufree_page += PGSIZE;
+  user_vm_map((pagetable_t)current->pagetable, va, PGSIZE, (uint64)pa,prot_to_type(PROT_WRITE | PROT_READ, 1));
+  current->master = (block*)pa;
+  memset(pa,0,PGSIZE);
 
-    current->trapframe->regs.sp = (uint64)vsp;
-    current->trapframe->regs.a1 = (uint64)vsp;
-    current->trapframe->regs.a0 = (uint64)1;
-  }
+  size_t * vsp, * sp;
+  vsp = (size_t *)current->trapframe->regs.sp;
+  vsp -= 8;
+  sp = (size_t *)user_va_to_pa(current->pagetable, (void*)vsp);
+  memcpy((char *)sp, argv, 1+strlen(argv));
+  vsp--;sp--;
+  * sp = (uint64)(1+vsp);
+
+  current->trapframe->regs.sp = (uint64)vsp;
+  current->trapframe->regs.a1 = (uint64)vsp;
+  current->trapframe->regs.a0 = (uint64)1;
+
   switch_to(current);
 }
 
@@ -435,4 +429,185 @@ ssize_t do_wait(uint64 pid)
       return -2;
     }
   }
+}
+
+//0 stand for empty, 1 stand for free a block, 2 stand for assign a block, 3 stand for block merge
+block* findx(uint64 mark,uint64 size,uint64 va) 
+{
+  int i;
+  switch(mark){
+  case 0:
+  {
+    for(i=0;i<PGSIZE/sizeof(block)-1;i++)
+      if((current->master+i)->mark == mark)
+        return current->master+i;
+    break;
+  }
+  case 1:
+  {
+    for(i=0;i<PGSIZE/sizeof(block)-1;i++)
+      if((current->master+i)->mark == mark && (current->master+i)->va==va)
+        return current->master+i;
+    return current->master-1;
+    break;
+  }
+  case 2:
+  {
+    for(i=0;i<PGSIZE/sizeof(block)-1;i++)
+      if((current->master+i)->mark == mark && (current->master+i)->size>=size)
+        return current->master+i;
+    return current->master-1;
+    break;
+  }
+  case 3:
+  {
+    for(i=0;i<PGSIZE/sizeof(block)-1;i++)
+      if((current->master+i)->mark == 2 && (current->master+i)->va==va+size)
+        return current->master+i;
+    return current->master-1;
+    break;
+  }}
+  return current->master-1;
+}
+
+block* alloc_block()
+{
+    void * pa = alloc_page();
+    uint64 va = g_ufree_page;
+    g_ufree_page += PGSIZE;
+    user_vm_map((pagetable_t)current->pagetable, va, PGSIZE, (uint64)pa,prot_to_type(PROT_WRITE | PROT_READ, 1));
+    //place the block struct in master
+    block *b = findx(0,0,0);
+    
+    b->pa = (uint64)pa;
+    b->size = PGSIZE;
+    b->va = (uint64)va;
+    b->mark = 2;
+    return b;
+}
+
+uint64 better_alloc(uint64 size)
+{
+  size = ROUNDUP(size,8);
+
+  uint64 size_of_block = ROUNDUP(sizeof(block),8);
+  block *b,*new_b; //b is the block we want to malloc
+  
+  b = findx(2,size,0);
+  if (b==current->master-1) // not found
+    b = alloc_block();
+  
+  new_b = findx(0,0,0);
+  new_b->pa = (uint64)(b->pa);
+  new_b->size = size;
+  new_b->va = (uint64)(b->va);
+  new_b->mark = 1;
+
+  b->size -= size;
+  b->va += size;
+  b->pa += size;
+  // sprint("malloc: %x\n",new_b->va);
+  return new_b->va;
+}
+
+void  better_free(uint64 va)
+{
+  block * b , *p;
+  b = findx(1,0,va);
+  if (b==current->master-1) 
+    panic("Nothing to free!");
+  b->mark = 2;
+  //merge blocks
+  p = findx(3,b->size,va); 
+  if (p!=current->master-1)
+  {
+    p->va -= b->size;
+    p->pa -= b->size;
+    p->size += b->size;
+    b->mark = 0;
+    return;
+  } 
+  //put it in first
+  uint64 temp;
+  temp = b->size;
+  b->size = current->master->size;
+  current->master->size = temp;
+
+  temp = b->pa;
+  b->pa = current->master->pa;
+  current->master->pa = temp;
+  
+  temp = b->va;
+  b->va = current->master->va;
+  current->master->va = temp;
+}
+
+
+//PV operation function
+long do_sem_new(int resource)
+{
+  if(cur<SEM_MAX)
+  {
+    signal[cur].signal = resource;
+    return cur++;
+  }
+  panic("Too many signals!You should notice your process.\n");
+  return -1;
+}
+
+//P operation
+void do_sem_P(int mutex){
+  if(mutex<0||mutex>=SEM_MAX)
+  {
+    panic("Your signal is error!\n");
+    return;
+  }
+  signal[mutex].signal--;
+  if(signal[mutex].signal<0){
+    //insert current process to this signal's waiting list
+    insert_to_waiting_queue(mutex);
+    //schedule a ready process
+    schedule();
+  }
+  
+}
+
+//V operation
+void do_sem_V(int mutex){
+  if(mutex<0||mutex>=SEM_MAX)
+  {
+    panic("Your signal is error!\n");
+    return;
+  }
+  signal[mutex].signal++;
+  if(signal[mutex].signal<=0)
+  {
+    if(signal[mutex].waiting_queue!=NULL){
+      process* cur=signal[mutex].waiting_queue;
+      signal[mutex].waiting_queue=signal[mutex].waiting_queue->queue_next;
+      cur->status = READY;
+      insert_to_ready_queue(cur);
+    }
+  }
+  
+}
+
+//P operation's insert
+void insert_to_waiting_queue(int mutex){
+  if(signal[mutex].waiting_queue==NULL)
+  {
+    signal[mutex].waiting_queue = current;
+  }
+  else{
+    process *cur=signal[mutex].waiting_queue;
+    for(;cur->queue_next!=NULL;cur=cur->queue_next)
+    {
+      if(cur==current) return;
+    }
+    if(cur==current) return;
+    cur->queue_next=current;
+  }
+  
+  current->queue_next=NULL;
+  current->status=BLOCKED;
 }

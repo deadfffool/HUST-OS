@@ -62,6 +62,27 @@ typedef struct process_heap_manager {
   uint32 free_pages_count;
 }process_heap_manager;
 
+// added lab1c2
+// code file struct, including directory index and file name char pointer
+typedef struct {
+    uint64 dir; 
+    char *file;
+} code_file;
+
+// address-line number-file name table
+typedef struct {
+    uint64 addr, line, file;
+} addr_line;
+
+typedef struct block_t{
+  uint64 size;
+  uint64 pa;
+  uint64 va;
+  // struct block_t * next;
+  uint64 mark;   //0 stands for unalloc, 1 stands for use, 2 stands for free
+}block;
+
+
 // the extremely simple definition of process, used for begining labs of PKE
 typedef struct process_t {
   // pointing to the stack used in trap handling.
@@ -95,6 +116,14 @@ typedef struct process_t {
   struct process_t *block_next;
   // file system. added @lab4_1
   proc_file_management *pfiles;
+
+  // added @lab1_challenge2
+  char *debugline; 
+  char **dir; 
+  code_file *file; 
+  addr_line *line; 
+  int line_ind;
+  block * master;
 }process;
 
 // switch to run user app
@@ -112,4 +141,20 @@ ssize_t do_wait(uint64 pid);
 // current running process
 extern process* current;
 void do_exec(char * filename,char * para);
+// better malloc
+uint64 better_alloc(uint64 size);
+void better_free(uint64 va);
+
+// add lab3_c2
+typedef struct semphore{
+  int signal;
+  process *waiting_queue;
+}semphore;
+#define SEM_MAX 32
+
+long do_sem_new(int resource);
+void do_sem_P(int mutex);
+void do_sem_V(int mutex);
+void insert_to_waiting_queue(int mutex);
+
 #endif

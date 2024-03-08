@@ -7,6 +7,7 @@
 /bin/app_ls /RAMDISK0
 /bin/app_backtrace
 /bin/app_sum
+/bin/app_wait
 
 END END END
 

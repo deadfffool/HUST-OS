@@ -161,12 +161,12 @@ void load_bincode_from_host_elf_name(process *p,char *filename)
   // load elf. elf_load() is defined above.
   if (elf_load(&elfloader) != EL_OK) panic("Fail on loading elf.\n");
 
-  // entry (virtual, also physical in lab1_x) address
-  p->trapframe->epc = elfloader.ehdr.entry;
-
   // added @lab1c1
   load_func_name(&elfloader);
   bubble_sort(symbols,count); 
+
+  // entry (virtual, also physical in lab1_x) address
+  p->trapframe->epc = elfloader.ehdr.entry;
 
   // close the host spike file
   vfs_close( info.f );
@@ -186,34 +186,34 @@ void load_func_name(elf_ctx *ctx)
   uint64 sect_num = ctx->ehdr.shnum;
   uint64 shstr_offset = ctx->ehdr.shoff + ctx->ehdr.shstrndx * sizeof(elf_sect_header);
   elf_fpread(ctx, (void *)&shstr_sh, sizeof(shstr_sh), shstr_offset);
-  //sprint("%d\n", shstr_sh.sh_size);   208
-  char shstr_str[shstr_sh.sh_size];
-  uint64 shstr_sect_off = shstr_sh.sh_offset;
-  elf_fpread(ctx, &shstr_str, shstr_sh.sh_size, shstr_sect_off);
+  //sprint("%d\n", shstr_sh.size);   208
+  char shstr_str[shstr_sh.size];
+  uint64 shstr_sect_off = shstr_sh.offset;
+  elf_fpread(ctx, &shstr_str, shstr_sh.size, shstr_sect_off);
   //sprint("%d %d\n", shstr_offset, shstr_sect_off);
 
   //find strtab and symtab
   for(int i=0; i<sect_num; i++) {
     elf_fpread(ctx, (void*)&temp_sh, sizeof(temp_sh), ctx->ehdr.shoff+i*ctx->ehdr.shentsize);
-    uint32 type = temp_sh.sh_type;
-    if(strcmp(shstr_str+temp_sh.sh_name,".symtab")==0)
+    uint32 type = temp_sh.type;
+    if(strcmp(shstr_str+temp_sh.name,".symtab")==0)
       sym_sh = temp_sh; 
-    else if(strcmp(shstr_str+temp_sh.sh_name,".strtab")==0)
+    else if(strcmp(shstr_str+temp_sh.name,".strtab")==0)
       str_sh = temp_sh; 
   }
 
-  uint64 str_sect_off = str_sh.sh_offset;
-  uint64 sym_num = sym_sh.sh_size/sizeof(elf_sym);
+  uint64 str_sect_off = str_sh.offset;
+  uint64 sym_num = sym_sh.size/sizeof(elf_sym);
 
   count = 0;
   for(int i=0; i<sym_num; i++) {
     elf_sym symbol;
-    elf_fpread(ctx, (void*)&symbol, sizeof(symbol), sym_sh.sh_offset+i*sizeof(elf_sym));
-    if(symbol.st_name == 0) continue;
-    if(symbol.st_info == STT_FUNC + STB_GLOBAL ){
+    elf_fpread(ctx, (void*)&symbol, sizeof(symbol), sym_sh.offset+i*sizeof(elf_sym));
+    if(symbol.name == 0) continue;
+    if(symbol.info == STT_FUNC + STB_GLOBAL ){
       char symname[32];
-      elf_fpread(ctx, (void*)&symname, sizeof(symname), str_sect_off+symbol.st_name); //里面应该自己有\0
-      symbols[count].off = symbol.st_value;
+      elf_fpread(ctx, (void*)&symname, sizeof(symname), str_sect_off+symbol.name); //里面应该自己有\0
+      symbols[count].off = symbol.value;
       strcpy(symbols[count].name, symname);
       // sprint("%s\n",symbols[count].name);
       // sprint("0x%lx\n",symbols[count].off);

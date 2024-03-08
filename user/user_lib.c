@@ -196,3 +196,38 @@ int read_cwd(char *path) {
 int change_cwd(const char *path) {
   return do_user_call(SYS_user_ccwd, (uint64)path, 0, 0, 0, 0, 0, 0);
 }
+
+//
+// lib call to better_malloc
+//
+void* better_malloc(int n) {
+  return (void*)do_user_call(SYS_user_malloc, n, 0, 0, 0, 0, 0, 0);
+}
+
+//
+// lib call to better_free
+//
+void better_free(void* va) {
+  do_user_call(SYS_user_free, (uint64)va, 0, 0, 0, 0, 0, 0);
+}
+
+//added @lab3_challenge2
+int sem_new(int resource){
+  //printu("sem_new syscall\n");
+  return do_user_call(SYS_user_sem_new,resource,0,0,0,0,0,0);
+}
+
+void sem_P(int mutex){
+  //printu("sem_p syscall\n");
+  do_user_call(SYS_user_sem_P,mutex,0,0,0,0,0,0);
+}
+
+void sem_V(int mutex){
+  //printu("sem_v syscall\n");
+  do_user_call(SYS_user_sem_V,mutex,0,0,0,0,0,0);
+}
+
+void printpa(int* va)
+{
+  do_user_call(SYS_user_printpa, (uint64)va, 0, 0, 0, 0, 0, 0);
+}

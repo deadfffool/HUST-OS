@@ -43,4 +43,14 @@ int exec(const char *filename, const char * para);
 // added @ lab4_c1
 int read_cwd(char *path);
 int change_cwd(const char *path);
+
+// added lab2c2
+void* better_malloc(int n);
+void better_free(void* va);
+
+// added lab3c2
+int sem_new(int resource);
+void sem_P(int mutex);
+void sem_V(int mutex);
+void printpa(int* va);
 #endif

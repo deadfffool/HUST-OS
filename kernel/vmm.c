@@ -188,12 +188,11 @@ void user_vm_unmap(pagetable_t page_dir, uint64 va, uint64 size, int free) {
   // (use free_page() defined in pmm.c) the physical pages. lastly, invalidate the PTEs.
   // as naive_free reclaims only one page at a time, you only need to consider one page
   // to make user/app_naive_malloc to behave correctly.
-  if(free){
-    pte_t *PTE = page_walk(page_dir, va, 0);
-    if(PTE){
+  pte_t *PTE = page_walk(page_dir, va, 0);
+  if(PTE){
+    if(free)
       free_page((void *)(PTE2PA(*PTE)));
-      *PTE = *PTE & (~PTE_V);
-    }
+    *PTE = *PTE & (~PTE_V);
   }
 }
 
@@ -213,4 +212,13 @@ void print_proc_vmspace(process* proc) {
     }
     sprint( ", mapped to pa:%lx\n", lookup_pa(proc->pagetable, proc->mapped_info[i].va) );
   }
+}
+
+// added on lab3_c3
+void copy_on_write(process *proc, uint64 va) {
+  uint64 pa = lookup_pa(proc->pagetable,va);
+  void *new_pa = alloc_page();
+  user_vm_unmap(proc->pagetable, va, PGSIZE, 0);
+  user_vm_map(proc->pagetable, ROUNDUP(va,PGSIZE), PGSIZE, (uint64)new_pa, prot_to_type(PROT_WRITE | PROT_READ, 1));
+  memcpy(new_pa, (void*)pa, PGSIZE);
 }

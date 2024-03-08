@@ -7,6 +7,7 @@
 #define MAX_CMDLINE_ARGS 64
 #define STT_FUNC  2    //st_info
 #define STB_GLOBAL (1<<4)   //st_info
+#define MAX_DEBUGLINE 10000
 
 // elf header structure
 typedef struct elf_header_t {
@@ -28,26 +29,26 @@ typedef struct elf_header_t {
 } elf_header;
 
 typedef struct elf_sect_header_t {
-  uint32 sh_name;		  /* Section name, index in string tbl */
-  uint32 sh_type;		  /* Type of section */
-  uint64 sh_flags;		/* Miscellaneous section attributes */
-  uint64 sh_addr;		  /* Section virtual addr at execution */
-  uint64 sh_offset;		/* Section file offset */
-  uint64 sh_size;		  /* Size of section in bytes */
-  uint32 sh_link;		  /* Index of another section */
-  uint32 sh_info;		  /* Additional section information */
-  uint64 sh_addralign;/* Section alignment */
-  uint64 sh_entsize;	/* Entry size if section holds table */
+  uint32 name;		  /* Section name, index in string tbl */
+  uint32 type;		  /* Type of section */
+  uint64 flags;		/* Miscellaneous section attributes */
+  uint64 addr;		  /* Section virtual addr at execution */
+  uint64 offset;		/* Section file offset */
+  uint64 size;		  /* Size of section in bytes */
+  uint32 link;		  /* Index of another section */
+  uint32 info;		  /* Additional section information */
+  uint64 addralign;/* Section alignment */
+  uint64 entsize;	/* Entry size if section holds table */
 } elf_sect_header;
 
 // elf symbol table structure
 typedef struct elf_sym_t {
-  uint32   st_name;
-  uint8    st_info;      /* the type of symbol */
-  uint8    st_other;
-  uint16   st_shndx;
-  uint64   st_value;     // address maybe
-  uint64   st_size;
+  uint32   name;
+  uint8    info;      /* the type of symbol */
+  uint8    other;
+  uint16   shndx;
+  uint64   value;     // address maybe
+  uint64   size;
 } elf_sym;
 
 // segment types, attributes of elf_prog_header_t.flags
@@ -90,11 +91,25 @@ typedef struct elf_info_t {
   process *p;
 } elf_info;
 
-
+// added lab1c1
 typedef struct symbol_tab{
 	char name[16];
 	uint64 off;
 } Symbols;
+
+// added lab1c2
+// compilation units header (in debug line section)
+typedef struct __attribute__((packed)) {
+    uint32 length;
+    uint16 version;
+    uint32 header_length;
+    uint8 min_instruction_length;
+    uint8 default_is_stmt;
+    int8 line_base;
+    uint8 line_range;
+    uint8 opcode_base;
+    uint8 std_opcode_lengths[12];
+} debug_header;
 
 elf_status elf_init(elf_ctx *ctx, void *info);
 elf_status elf_load(elf_ctx *ctx);

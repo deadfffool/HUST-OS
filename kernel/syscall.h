@@ -18,6 +18,18 @@
 #define SYS_user_wait (SYS_user_base + 6)
 // added @lab1_c1
 #define SYS_user_backtrace (SYS_user_base + 7)
+// added @lab2_c2
+#define SYS_user_malloc (SYS_user_base + 8)
+#define SYS_user_free (SYS_user_base + 9)
+
+// added @lab3_c2
+#define SYS_user_sem_new (SYS_user_base+10)
+#define SYS_user_sem_P (SYS_user_base+11)
+#define SYS_user_sem_V (SYS_user_base+12)
+
+// added @lab3_c3
+#define SYS_user_printpa (SYS_user_base + 13)
+
 
 // added @lab4_1
 #define SYS_user_open (SYS_user_base + 17)
