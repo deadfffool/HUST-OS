@@ -13,7 +13,7 @@ extern process procs[NPROC];
 // insert a process, proc, into the END of ready queue.
 //
 void insert_to_ready_queue( process* proc ) {
-  sprint( "going to insert process %d to ready queue.\n", proc->pid );
+  // sprint( "going to insert process %d to ready queue.\n", proc->pid );
   // if the queue is empty in the beginning
   if( ready_queue_head == NULL ){
     proc->status = READY;

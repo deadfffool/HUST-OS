@@ -82,13 +82,13 @@ uint64 sys_user_free_page(uint64 va) {
 // kerenl entry point of naive_fork
 //
 ssize_t sys_user_fork() {
-  sprint("User call fork.\n");
+  // sprint("User call fork.\n");
   return do_fork( current );
 }
 
 // added lab3_c3 cow fork
 ssize_t sys_user_cow_fork() {
-  sprint("User call fork.\n");
+  // sprint("User call fork.\n");
   return do_cow_fork( current );
 }
 

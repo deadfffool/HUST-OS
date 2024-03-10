@@ -92,10 +92,10 @@ elf_status elf_load(elf_ctx *ctx) {
     // SEGMENT_READABLE, SEGMENT_EXECUTABLE, SEGMENT_WRITABLE are defined in kernel/elf.h
     if( ph_addr.flags == (SEGMENT_READABLE|SEGMENT_EXECUTABLE) ){
       ((process*)(((elf_info*)(ctx->info))->p))->mapped_info[j].seg_type = CODE_SEGMENT;
-      sprint( "CODE_SEGMENT added at mapped info offset:%d\n", j );
+      // sprint( "CODE_SEGMENT added at mapped info offset:%d\n", j );
     }else if ( ph_addr.flags == (SEGMENT_READABLE|SEGMENT_WRITABLE) ){
       ((process*)(((elf_info*)(ctx->info))->p))->mapped_info[j].seg_type = DATA_SEGMENT;
-      sprint( "DATA_SEGMENT added at mapped info offset:%d\n", j );
+      // sprint( "DATA_SEGMENT added at mapped info offset:%d\n", j );
     }else
       panic( "unknown program segment encountered, segment flag:%d.\n", ph_addr.flags );
 
@@ -131,47 +131,13 @@ void load_bincode_from_host_elf(process *p, char *filename) {
   // added @lab1c1
   load_func_name(&elfloader);
   bubble_sort(symbols,count); 
-
   // entry (virtual, also physical in lab1_x) address
   p->trapframe->epc = elfloader.ehdr.entry;
 
   // close the vfs file
   vfs_close( info.f );
 
-  sprint("Application program entry point (virtual address): 0x%lx\n", p->trapframe->epc);
-}
-
-void load_bincode_from_host_elf_name(process *p,char *filename)
-{
-  sprint("Application: %s\n", filename);
-  //elf loading. elf_ctx is defined in kernel/elf.h, used to track the loading process.
-  elf_ctx elfloader;
-  // elf_info is defined above, used to tie the elf file and its corresponding process.
-  elf_info info;
-  // info.f = spike_file_open(filepath, O_RDONLY, 0);
-  info.f = vfs_open(filename, O_RDONLY);
-  info.p = p;
-  // IS_ERR_VALUE is a macro defined in spike_interface/spike_htif.h
-  if (IS_ERR_VALUE(info.f)) panic("Fail on openning the input application program.\n");
-
-  // init elfloader context. elf_init() is defined above.
-  if (elf_init(&elfloader, &info) != EL_OK)
-    panic("fail to init elfloader.\n");
-
-  // load elf. elf_load() is defined above.
-  if (elf_load(&elfloader) != EL_OK) panic("Fail on loading elf.\n");
-
-  // added @lab1c1
-  load_func_name(&elfloader);
-  bubble_sort(symbols,count); 
-
-  // entry (virtual, also physical in lab1_x) address
-  p->trapframe->epc = elfloader.ehdr.entry;
-
-  // close the host spike file
-  vfs_close( info.f );
-
-  sprint("Application program entry point (virtual address): 0x%lx\n", p->trapframe->epc);
+  // sprint("Application program entry point (virtual address): 0x%lx\n", p->trapframe->epc);
 }
 
 void load_func_name(elf_ctx *ctx)

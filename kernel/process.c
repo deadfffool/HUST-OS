@@ -141,8 +141,8 @@ process* alloc_process() {
   procs[i].mapped_info[SYSTEM_SEGMENT].npages = 1;
   procs[i].mapped_info[SYSTEM_SEGMENT].seg_type = SYSTEM_SEGMENT;
 
-  sprint("in alloc_proc. user frame 0x%lx, user stack 0x%lx, user kstack 0x%lx \n",
-    procs[i].trapframe, procs[i].trapframe->regs.sp, procs[i].kstack);
+  // sprint("in alloc_proc. user frame 0x%lx, user stack 0x%lx, user kstack 0x%lx \n",
+    // procs[i].trapframe, procs[i].trapframe->regs.sp, procs[i].kstack);
 
   // initialize the process's heap manager
   procs[i].user_heap.heap_top = USER_FREE_ADDRESS_START;
@@ -158,7 +158,6 @@ process* alloc_process() {
 
   // initialize files_struct
   procs[i].pfiles = init_proc_file_management();
-  sprint("in alloc_proc. build proc_file_management successfully.\n");
 
   // return after initialization.
   return &procs[i];
@@ -186,7 +185,7 @@ int free_process( process* proc ) {
 //
 int do_cow_fork( process* parent)
 {
-  sprint( "will fork a child from parent %d.\n", parent->pid );
+  // sprint( "will fork a child from parent %d.\n", parent->pid );
   process* child = alloc_process();
 
   for( int i=0; i<parent->total_mapped_region; i++ ){
@@ -205,10 +204,8 @@ int do_cow_fork( process* parent)
         for (uint64 heap_block = current->user_heap.heap_bottom; heap_block < current->user_heap.heap_top; heap_block += PGSIZE) 
         {
           uint64 parent_pa = lookup_pa(parent->pagetable, heap_block);
-          // 直接映射
           user_vm_map((pagetable_t)child->pagetable, heap_block, PGSIZE, parent_pa,
                       prot_to_type(PROT_READ, 1));
-          // pte
           pte_t *child_pte = page_walk(child->pagetable, heap_block, 0);
           if(child_pte == NULL)
             panic("error when mapping heap segment!");
@@ -231,7 +228,7 @@ int do_cow_fork( process* parent)
           uint64 addr = lookup_pa(parent->pagetable, parent->mapped_info[i].va + j * PGSIZE);
           // code segment and data segment are shared by parents and child
           map_pages(child->pagetable, parent->mapped_info[i].va + j * PGSIZE, PGSIZE, addr, prot_to_type(PROT_READ | PROT_EXEC, 1));
-          sprint("do_fork map code segment at pa:%lx of parent to child at va:%lx.\n", addr, parent->mapped_info[i].va + j * PGSIZE);
+          // sprint("do_fork map code segment at pa:%lx of parent to child at va:%lx.\n", addr, parent->mapped_info[i].va + j * PGSIZE);
         }
         child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
         child->mapped_info[child->total_mapped_region].npages = parent->mapped_info[i].npages;
@@ -270,9 +267,9 @@ int do_cow_fork( process* parent)
 // segments (code, system) of the parent to child. the stack segment remains unchanged
 // for the child.
 //
-int do_fork( process* parent)
+int do_fork(process* parent)
 {
-  sprint( "will fork a child from parent %d.\n", parent->pid );
+  // sprint( "will fork a child from parent %d.\n", parent->pid );
   process* child = alloc_process();
 
   for( int i=0; i<parent->total_mapped_region; i++ ){
@@ -328,7 +325,7 @@ int do_fork( process* parent)
         // DO NOT COPY THE PHYSICAL PAGES, JUST MAP THEM.
         uint64 pa = lookup_pa(parent->pagetable, parent->mapped_info[i].va);
         user_vm_map(child->pagetable, parent->mapped_info[i].va, PGSIZE, pa, prot_to_type(PROT_READ | PROT_EXEC, 1));
-        sprint("do_fork map code segment at pa:%lx of parent to child at va:%lx.\n", pa, parent->mapped_info[i].va);
+        // sprint("do_fork map code segment at pa:%lx of parent to child at va:%lx.\n", pa, parent->mapped_info[i].va);
 
         // after mapping, register the vm region (do not delete codes below!)
         child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
@@ -416,7 +413,7 @@ process* alloc_process_without_sprint() {
   temp.total_mapped_region = 4;
 
   // initialize files_struct
-  temp.pfiles = init_proc_file_management_name();
+  temp.pfiles = init_proc_file_management();
   // return after initialization.
   return &temp;
 }
@@ -426,19 +423,7 @@ void do_exec(char * filename,char * argv)
 {  
   elf_info info;
   process * p = alloc_process_without_sprint();
-  load_bincode_from_host_elf_name(p,filename);
-  // // prepare for args
-  // uint64 argc = 0, sp = p->kstack, ustack[8];  // maxarg = 8
-  // for(argc = 0; argv[argc]; argc++) {
-  //   sp -= strlen(argv[argc]) + 1;
-  //   sp -= sp % 16; // riscv sp must be 16-byte aligned
-  //   memcpy((void*)lookup_pa(p->pagetable,sp), (void*)argv[argc], strlen(argv[argc]) + 1);
-  //   ustack[argc] = sp;
-  // }
-  // ustack[argc] = 0;
-  // sp -= (argc+1) * sizeof(uint64);
-  // sp -= sp % 16;
-  // memcpy((void*)lookup_pa(p->pagetable,sp), (void *)ustack, (argc+1)*sizeof(uint64));
+  load_bincode_from_host_elf(p,filename);
   
   current->kstack = p->kstack;
   current->pagetable = p->pagetable;
@@ -457,7 +442,7 @@ void do_exec(char * filename,char * argv)
   user_vm_map((pagetable_t)current->pagetable, va, PGSIZE, (uint64)pa,prot_to_type(PROT_WRITE | PROT_READ, 1));
   current->master = (block*)pa;
   memset(pa,0,PGSIZE);
-
+  
   size_t * vsp, * sp;
   vsp = (size_t *)current->trapframe->regs.sp;
   vsp -= 8;
