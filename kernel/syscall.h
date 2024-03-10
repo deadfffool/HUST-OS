@@ -28,7 +28,10 @@
 #define SYS_user_sem_V (SYS_user_base+12)
 
 // added @lab3_c3
-#define SYS_user_printpa (SYS_user_base + 13)
+#define SYS_user_cow_fork (SYS_user_base + 13)
+
+// added @lab3_c3
+#define SYS_user_printpa (SYS_user_base + 14)
 
 
 // added @lab4_1

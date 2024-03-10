@@ -12,7 +12,7 @@ int main(void) {
   int *heap_data = naive_malloc();
   printu("the physical address of parent process heap is: ");
   printpa(heap_data);
-  int pid = fork();
+  int pid = cow_fork();
   if (pid == 0) {
     printu("the physical address of child process heap before copy on write is: ");
     printpa(heap_data);

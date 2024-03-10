@@ -5,9 +5,12 @@
 /bin/app_cat /RAMDISK0/sub_dir/ramfile1
 /bin/app_ls /RAMDISK0/sub_dir
 /bin/app_ls /RAMDISK0
-/bin/app_backtrace
-/bin/app_sum
-/bin/app_wait
+
+/bin/app_backtrace  1
+/bin/app_wait  1
+/bin/app_singlepageheap 1
+/bin/app_relativepath 1
+/bin/app_semaphore 1
+/bin/app_cow 1
 
 END END END
-
