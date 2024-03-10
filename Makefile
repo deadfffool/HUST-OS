@@ -147,6 +147,12 @@ USER_G_CPPS 		:= user/app_singlepageheap.c user/user_lib.c
 USER_G_OBJS  		:= $(addprefix $(OBJ_DIR)/, $(patsubst %.c,%.o,$(USER_G_CPPS)))
 
 USER_G_TARGET 	:= $(HOSTFS_ROOT)/bin/app_singlepageheap
+
+USER_X_CPPS 		:= user/app_scanf.c user/user_lib.c
+
+USER_X_OBJS  		:= $(addprefix $(OBJ_DIR)/, $(patsubst %.c,%.o,$(USER_X_CPPS)))
+
+USER_X_TARGET 	:= $(HOSTFS_ROOT)/bin/app_scanf
 #------------------------targets------------------------
 $(OBJ_DIR):
 	@-mkdir -p $(OBJ_DIR)	
@@ -167,6 +173,7 @@ $(OBJ_DIR):
 	@-mkdir -p $(dir $(USER_D_OBJS))
 	@-mkdir -p $(dir $(USER_H_OBJS))
 	@-mkdir -p $(dir $(USER_G_OBJS))
+	@-mkdir -p $(dir $(USER_X_OBJS))
 
 $(OBJ_DIR)/%.o : %.c
 	@echo "compiling" $<
@@ -276,15 +283,21 @@ $(USER_G_TARGET): $(OBJ_DIR) $(UTIL_LIB) $(USER_G_OBJS)
 	@$(COMPILE) --entry=main $(USER_G_OBJS) $(UTIL_LIB) -o $@
 	@echo "User app has been built into" \"$@\"
 
+$(USER_X_TARGET): $(OBJ_DIR) $(UTIL_LIB) $(USER_X_OBJS)
+	@echo "linking" $@	...	
+	-@mkdir -p $(HOSTFS_ROOT)/bin
+	@$(COMPILE) --entry=main $(USER_X_OBJS) $(UTIL_LIB) -o $@
+	@echo "User app has been built into" \"$@\"
+
 -include $(wildcard $(OBJ_DIR)/*/*.d)
 -include $(wildcard $(OBJ_DIR)/*/*/*.d)
 
 .DEFAULT_GOAL := $(all)
 
-all: $(KERNEL_TARGET) $(USER_TARGET) $(USER_E_TARGET) $(USER_M_TARGET) $(USER_T_TARGET) $(USER_C_TARGET) $(USER_O_TARGET) $(USER_B_TARGET) $(USER_S_TARGET) $(USER_R_TARGET) $(USER_W_TARGET) $(USER_A_TARGET) $(USER_D_TARGET) $(USER_H_TARGET) $(USER_G_TARGET)
+all: $(KERNEL_TARGET) $(USER_TARGET) $(USER_E_TARGET) $(USER_M_TARGET) $(USER_T_TARGET) $(USER_C_TARGET) $(USER_O_TARGET) $(USER_B_TARGET) $(USER_S_TARGET) $(USER_R_TARGET) $(USER_W_TARGET) $(USER_A_TARGET) $(USER_D_TARGET) $(USER_H_TARGET) $(USER_G_TARGET) $(USER_X_TARGET)
 .PHONY:all
 
-run: $(KERNEL_TARGET) $(USER_TARGET) $(USER_E_TARGET) $(USER_M_TARGET) $(USER_T_TARGET) $(USER_C_TARGET) $(USER_O_TARGET) $(USER_B_TARGET) $(USER_S_TARGET) $(USER_R_TARGET) $(USER_W_TARGET) $(USER_A_TARGET) $(USER_D_TARGET) $(USER_H_TARGET) $(USER_G_TARGET)
+run: $(KERNEL_TARGET) $(USER_TARGET) $(USER_E_TARGET) $(USER_M_TARGET) $(USER_T_TARGET) $(USER_C_TARGET) $(USER_O_TARGET) $(USER_B_TARGET) $(USER_S_TARGET) $(USER_R_TARGET) $(USER_W_TARGET) $(USER_A_TARGET) $(USER_D_TARGET) $(USER_H_TARGET) $(USER_G_TARGET) $(USER_X_TARGET)
 	@echo "********************HUST PKE********************"
 	spike $(KERNEL_TARGET) /bin/app_shell
 

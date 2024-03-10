@@ -33,6 +33,9 @@
 // added @lab3_c3
 #define SYS_user_printpa (SYS_user_base + 14)
 
+// added @challengex
+#define SYS_user_scanf (SYS_user_base + 15)
+
 
 // added @lab4_1
 #define SYS_user_open (SYS_user_base + 17)

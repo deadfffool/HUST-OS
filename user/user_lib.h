@@ -8,6 +8,7 @@
 #include "kernel/proc_file.h"
 
 int printu(const char *s, ...);
+int scanfu(const char* s, ...);
 int exit(int code);
 // added @ lab1_c1
 int print_backtrace(int n);

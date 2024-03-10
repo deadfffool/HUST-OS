@@ -33,6 +33,12 @@ ssize_t sys_user_print(const char* buf, size_t n) {
   return 0;
 }
 
+// added challengex
+ssize_t sys_user_scanf(const char* buf, size_t n) {
+  return 0;
+}
+
+
 //
 // implement the SYS_user_exit syscall
 //
@@ -371,6 +377,8 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
   switch (a0) {
     case SYS_user_print:
       return sys_user_print((const char*)a1, a2);
+    case SYS_user_scanf:
+      return sys_user_scanf((const char*)a1, a2);
     case SYS_user_exit:
       return sys_user_exit(a1);
     case SYS_user_allocate_page:
