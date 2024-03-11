@@ -12,5 +12,6 @@
 /bin/app_relativepath 1
 /bin/app_semaphore 1
 /bin/app_cow 1
+/bin/app_scanf 1
 
 END END END

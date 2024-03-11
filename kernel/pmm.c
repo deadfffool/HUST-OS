@@ -56,6 +56,19 @@ void *alloc_page(void) {
   return (void *)n;
 }
 
+
+void *alloc_two_page(void)
+{
+  list_node *n = g_free_mem_list.next;
+  while(n->next->next && (uint64)(n->next) - PGSIZE != (uint64)(n->next->next))
+    n = n->next;
+  if(!n->next->next)
+    panic("alloc two page fault!");
+  void * ret = (void*) n->next->next;
+  sprint("0x%x  0x%x\n",(uint64)n->next,(uint64)n->next->next);
+  n->next = n->next->next->next;
+  return ret;
+}
 //
 // pmm_init() establishes the list of free physical pages according to available
 // physical memory space.

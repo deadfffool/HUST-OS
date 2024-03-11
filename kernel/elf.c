@@ -22,15 +22,27 @@ int count;
 static void *elf_alloc_mb(elf_ctx *ctx, uint64 elf_pa, uint64 elf_va, uint64 size) {
   elf_info *msg = (elf_info *)ctx->info;
   // we assume that size of proram segment is smaller than a page.
-  kassert(size < PGSIZE);
-  void *pa = alloc_page();
-  if (pa == 0) panic("uvmalloc mem alloc falied\n");
-
-  memset((void *)pa, 0, PGSIZE);
-  user_vm_map((pagetable_t)msg->p->pagetable, elf_va, PGSIZE, (uint64)pa,
-         prot_to_type(PROT_WRITE | PROT_READ | PROT_EXEC, 1));
-
-  return pa;
+  kassert (size < 2 * PGSIZE);
+  if(size < PGSIZE)
+  {
+    void *pa = alloc_page();
+    if (pa == 0) 
+      panic("uvmalloc mem alloc falied\n");
+    memset((void *)pa, 0, PGSIZE);
+    user_vm_map((pagetable_t)msg->p->pagetable, elf_va, PGSIZE, (uint64)pa,
+          prot_to_type(PROT_WRITE | PROT_READ | PROT_EXEC, 1));
+    return pa;
+  }
+  else
+  {
+    void *pa = alloc_two_page();
+    if (pa == 0) 
+      panic("uvmalloc mem alloc falied\n");
+    memset((void *)pa, 0, 2*PGSIZE);
+    user_vm_map((pagetable_t)msg->p->pagetable, elf_va, 2*PGSIZE, (uint64)pa,
+          prot_to_type(PROT_WRITE | PROT_READ | PROT_EXEC, 1));
+    return pa;
+  }
 }
 
 //
