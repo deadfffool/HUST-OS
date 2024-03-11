@@ -7,8 +7,6 @@ int main(int argc, char *argv[]) {
   int MAXBUF = 512;
   char buf[MAXBUF];
   char *filename = argv[0];
-
-  printu("\n======== cat command ========\n");
   printu("cat: %s\n", filename);
 
   fd = open(filename, O_RDWR);

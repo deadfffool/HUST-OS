@@ -1,17 +1,17 @@
-/bin/app_mkdir /RAMDISK0/sub_dir
-/bin/app_touch /RAMDISK0/sub_dir/ramfile1
-/bin/app_touch /RAMDISK0/sub_dir/ramfile2
-/bin/app_echo /RAMDISK0/sub_dir/ramfile1
-/bin/app_cat /RAMDISK0/sub_dir/ramfile1
-/bin/app_ls /RAMDISK0/sub_dir
-/bin/app_ls /RAMDISK0
+/bin/mkdir /RAMDISK0/sub_dir
+/bin/touch /RAMDISK0/sub_dir/ramfile1
+/bin/touch /RAMDISK0/sub_dir/ramfile2
+/bin/echo /RAMDISK0/sub_dir/ramfile1
+/bin/cat /RAMDISK0/sub_dir/ramfile1
+/bin/ls /RAMDISK0/sub_dir
+/bin/ls /RAMDISK0
 
-/bin/app_backtrace  1
-/bin/app_wait  1
-/bin/app_singlepageheap 1
-/bin/app_relativepath 1
-/bin/app_semaphore 1
-/bin/app_cow 1
-/bin/app_scanf 1
+/bin/backtrace  
+/bin/wait  
+/bin/singlepageheap 
+/bin/relativepath 
+/bin/semaphore 
+/bin/cow 
+/bin/scanf 
 
 END END END

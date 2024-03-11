@@ -5,11 +5,8 @@
 
 int main(int argc, char *argv[]) {
   char *new_dir = argv[0];
-  printu("\n======== mkdir command ========\n");
-
   mkdir_u(new_dir);
   printu("mkdir: %s\n", new_dir);
-
   exit(0);
   return 0;
 }

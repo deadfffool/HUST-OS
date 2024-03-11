@@ -9,6 +9,7 @@
 #include "vmm.h"
 #include "pmm.h"
 #include "vfs.h"
+#include "syscall.h"
 #include "spike_interface/spike_utils.h"
 
 
@@ -121,14 +122,16 @@ elf_status elf_load(elf_ctx *ctx) {
 // load the elf of user application, by using the spike file interface.
 //
 void load_bincode_from_host_elf(process *p, char *filename) {
-  sprint("Application: %s\n", filename);
+  // sprint("Application: %s\n", filename);
 
   //elf loading. elf_ctx is defined in kernel/elf.h, used to track the loading process.
   elf_ctx elfloader;
   // elf_info is defined above, used to tie the elf file and its corresponding process.
   elf_info info;
 
-  info.f = vfs_open(filename, O_RDONLY);
+  char file_name[256];
+  change_path(file_name,filename);
+  info.f = vfs_open(file_name, O_RDONLY);
   info.p = p;
   // IS_ERR_VALUE is a macro defined in spike_interface/spike_htif.h
   if (IS_ERR_VALUE(info.f)) panic("Fail on openning the input application program.\n");

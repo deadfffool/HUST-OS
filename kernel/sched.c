@@ -122,6 +122,6 @@ void schedule() {
   ready_queue_head = ready_queue_head->queue_next;
 
   current->status = RUNNING;
-  sprint( "going to schedule process %d to run.\n", current->pid );
+  // sprint( "going to schedule process %d to run.\n", current->pid );
   switch_to( current );
 }

@@ -221,3 +221,32 @@ int do_link(char *oldpath, char *newpath) {
 int do_unlink(char *path) {
   return vfs_unlink(path);
 }
+
+
+void change_path(char* resultpath, char* pathpa)
+{
+  if(*pathpa != '.' && *pathpa != '/')
+  {
+    strcpy(resultpath,current->pfiles->cwd->name);
+    if(!strcmp(resultpath,"/")) *resultpath=0; 
+    strcat(resultpath,"/");
+    strcat(resultpath,pathpa);
+  }
+  else if(*pathpa == '.' && *(pathpa+1) != '.')
+  {
+    strcpy(resultpath,current->pfiles->cwd->name);
+    if(!strcmp(resultpath,"/")) *resultpath=0; 
+    strcat(resultpath,(pathpa+1));
+  }
+  else if( *pathpa == '.' && *(pathpa+1) == '.')
+  {
+    if(current->pfiles->cwd->parent){
+      strcpy(resultpath,current->pfiles->cwd->parent->name);
+      if(!strcmp(resultpath,"/")) *resultpath=0; //ignore the "/"
+      strcat(resultpath,pathpa);
+    }else
+      strcpy(resultpath,"/");
+  }
+  else
+    strcpy(resultpath,pathpa);
+}

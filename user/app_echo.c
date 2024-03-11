@@ -6,7 +6,6 @@ int main(int argc, char *argv[]) {
   int fd;
   char str[] = "hello world";
   char *filename = argv[0];
-  printu("\n======== echo command ========\n");
   printu("echo: %s\n", filename);
 
   fd = open(filename, O_RDWR | O_CREAT);

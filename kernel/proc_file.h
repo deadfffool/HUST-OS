@@ -36,5 +36,5 @@ typedef struct proc_file_management_t {
 proc_file_management *init_proc_file_management(void);
 
 void reclaim_proc_file_management(proc_file_management *pfiles);
-
+void change_path(char* resultpath, char* pathpa);
 #endif

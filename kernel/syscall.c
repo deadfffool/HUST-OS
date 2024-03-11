@@ -4,7 +4,6 @@
 
 #include <stdint.h>
 #include <errno.h>
-
 #include "util/types.h"
 #include "syscall.h"
 #include "string.h"
@@ -15,7 +14,6 @@
 #include "sched.h"
 #include "proc_file.h"
 #include "elf.h"
-
 #include "spike_interface/spike_utils.h"
 
 extern Symbols symbols[64];
@@ -127,26 +125,9 @@ ssize_t sys_user_wait(long pid) {
 // open file
 //
 ssize_t sys_user_open(char *pathva, int flags) {
-  char* pathpa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), pathva);
   char resultpath[256];
-  if(*pathpa == '.' && *(pathpa+1) != '.')
-  {
-    strcpy(resultpath,current->pfiles->cwd->name);
-    if(!strcmp(resultpath,"/")) *resultpath=0;
-    strcat(resultpath,(pathpa+1));
-  }
-  else if( *pathpa == '.' && *(pathpa+1) == '.')
-  {
-    if(current->pfiles->cwd->parent){
-      strcpy(resultpath,current->pfiles->cwd->parent->name);
-      if(!strcmp(resultpath,"/")) *resultpath=0;
-      strcat(resultpath,(pathpa+2));
-    }else
-      strcpy(resultpath,"/");
-  }
-  else
-    strcpy(resultpath,pathpa);
-
+  char* pathpa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), pathva);
+  change_path(resultpath, pathpa);
   return do_open(resultpath, flags);
 }
 
@@ -181,6 +162,22 @@ ssize_t sys_user_write(int fd, char *bufva, uint64 count) {
   }
   return count;
 }
+
+
+ssize_t sys_user_rcwd(char *path){
+  strcpy((char*)user_va_to_pa((pagetable_t)current->pagetable,path),current->pfiles->cwd->name);
+  return 0;
+}
+
+ssize_t sys_user_ccwd(char *path){
+  char resultpath[256];
+  char* pathpa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), path);
+  change_path(resultpath,pathpa);
+  if((ssize_t)strcpy(current->pfiles->cwd->name,resultpath)==0) 
+    return -1;
+  return 0;
+}
+
 
 //
 // lseek file
@@ -217,7 +214,9 @@ ssize_t sys_user_close(int fd) {
 //
 ssize_t sys_user_opendir(char * pathva){
   char * pathpa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), pathva);
-  return do_opendir(pathpa);
+  char resultpath[256];
+  change_path(resultpath,pathpa);
+  return do_opendir(resultpath);
 }
 
 //
@@ -233,7 +232,9 @@ ssize_t sys_user_readdir(int fd, struct dir *vdir){
 //
 ssize_t sys_user_mkdir(char * pathva){
   char * pathpa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), pathva);
-  return do_mkdir(pathpa);
+  char resultpath[256];
+  change_path(resultpath,pathpa);
+  return do_mkdir(resultpath);
 }
 
 //
@@ -294,36 +295,6 @@ ssize_t sys_user_backtrace(uint64 n){
   // for(i=0;i<count;i++)
   //   sprint("0x%lx    %s\n",symbols[i].off,symbols[i].name);
 
-  return 0;
-}
-
-ssize_t sys_user_rcwd(char *path){
-  strcpy((char*)user_va_to_pa((pagetable_t)current->pagetable,path),current->pfiles->cwd->name);
-  return 0;
-}
-
-ssize_t sys_user_ccwd(char *path){
-  char resultpath[256];
-  char* pathpa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), path);
-  if(*pathpa == '.' && *(pathpa+1) != '.')
-  {
-    strcpy(resultpath,current->pfiles->cwd->name);
-    if(!strcmp(resultpath,"/")) *resultpath=0; 
-    strcat(resultpath,(pathpa+1));
-  }
-  else if( *pathpa == '.' && *(pathpa+1) == '.')
-  {
-    if(current->pfiles->cwd->parent){
-      strcpy(resultpath,current->pfiles->cwd->parent->name);
-      if(!strcmp(resultpath,"/")) *resultpath=0; //ignore the "/"
-      strcat(resultpath,pathpa);
-    }else
-      strcpy(resultpath,"/");
-  }
-  else
-    strcpy(resultpath,pathpa);
-  if((ssize_t)strcpy(current->pfiles->cwd->name,resultpath)==0) 
-    return -1;
   return 0;
 }
 
