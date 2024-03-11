@@ -88,13 +88,6 @@ int fork() {
 }
 
 //
-// lib call to cow_fork
-//
-int cow_fork() {
-  return do_user_call(SYS_user_cow_fork, 0, 0, 0, 0, 0, 0, 0);
-}
-
-//
 // lib call to yield
 //
 void yield() {

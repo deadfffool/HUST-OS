@@ -10,6 +10,7 @@
 #include "vmm.h"
 #include "sched.h"
 #include "util/functions.h"
+#include "util/string.h"
 #include "memlayout.h"
 #include "spike_interface/spike_utils.h"
 
@@ -52,18 +53,10 @@ void handle_mtimer_trap() {
 void handle_user_page_fault(uint64 mcause, uint64 sepc, uint64 stval) {
   // sprint("handle_page_fault: %lx\n", stval);
   uint64 pa;
+  uint64 va = ROUNDDOWN(stval, PGSIZE);
+  pte_t *pte = page_walk(current->pagetable, va, 0);
   switch (mcause) {
     case CAUSE_STORE_PAGE_FAULT:
-      // TODO (lab2_3): implement the operations that solve the page fault to
-      // dynamically increase application stack.
-      // hint: first allocate a new physical page, and then, maps the new page to the
-      // virtual address that causes the page fault.
-      if(stval < USER_STACK_TOP && stval > (USER_STACK_TOP - 20 * STACK_SIZE))
-      {
-        map_pages(current->pagetable,ROUNDDOWN(stval,PGSIZE),PGSIZE,(uint64)alloc_page(),prot_to_type(PROT_READ|PROT_WRITE,1));
-        break;
-      }
-      pte_t *pte = page_walk(current->pagetable, stval, 0);
       if(pte == NULL)
       {
         pa = (uint64)alloc_page(); // allocate a new physical page
@@ -71,8 +64,18 @@ void handle_user_page_fault(uint64 mcause, uint64 sepc, uint64 stval) {
           panic("Can not allocate a new physical page.\n");
         map_pages(current->pagetable, ROUNDDOWN(stval, PGSIZE), PGSIZE, pa, prot_to_type(PROT_READ | PROT_WRITE, 1)); // maps the new page to the virtual address that causes the page fault
       }
-      else if(*pte & PTE_C) //cow
-        copy_on_write(current, stval);
+      else if(*pte & PTE_C)
+      {
+        void *pa = alloc_page();
+        memcpy(pa, (void *)lookup_pa(current->pagetable, va), PGSIZE);
+        *pte = PTE_V | PA2PTE(pa) | prot_to_type(PROT_READ | PROT_WRITE, 1);
+        *pte &= ~PTE_C;
+      }
+      else if(stval < USER_STACK_TOP && stval > (USER_STACK_TOP - 20 * STACK_SIZE))
+      {
+        map_pages(current->pagetable,va,PGSIZE,(uint64)alloc_page(),prot_to_type(PROT_READ|PROT_WRITE,1));
+        break;
+      }
       else
         panic("unknown page fault.\n");
       break;

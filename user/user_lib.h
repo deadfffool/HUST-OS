@@ -16,7 +16,6 @@ void* naive_malloc();
 void naive_free(void* va);
 int fork();
 void yield();
-int cow_fork();
 // added @ lab3_c1
 void wait();
 

@@ -94,12 +94,6 @@ ssize_t sys_user_fork() {
   return do_fork( current );
 }
 
-// added lab3_c3 cow fork
-ssize_t sys_user_cow_fork() {
-  // sprint("User call fork.\n");
-  return do_cow_fork( current );
-}
-
 //
 // kerenl entry point of yield. added @lab3_2
 //
@@ -412,8 +406,6 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
       return sys_user_sem_V(a1);  
     case SYS_user_printpa:
       return sys_user_printpa(a1);
-    case SYS_user_cow_fork:
-      return sys_user_cow_fork(a1);
     default:
       panic("Unknown syscall %ld \n", a0);
   }

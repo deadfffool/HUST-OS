@@ -40,6 +40,7 @@ uint64 prot_to_type(int prot, int user) {
   if (prot & PROT_WRITE) perm |= PTE_W | PTE_D;
   if (prot & PROT_EXEC) perm |= PTE_X | PTE_A;
   if (perm == 0) perm = PTE_R;
+  if (prot & PROT_COW) perm |= PTE_C | PTE_A;
   if (user) perm |= PTE_U;
   return perm;
 }
@@ -218,13 +219,4 @@ void print_proc_vmspace(process* proc) {
     }
     sprint( ", mapped to pa:%lx\n", lookup_pa(proc->pagetable, proc->mapped_info[i].va) );
   }
-}
-
-// added on lab3_c3
-void copy_on_write(process *proc, uint64 va) {
-  uint64 pa = lookup_pa(proc->pagetable,va);
-  void *new_pa = alloc_page();
-  user_vm_unmap(proc->pagetable, va, PGSIZE, 0);
-  user_vm_map(proc->pagetable, ROUNDUP(va,PGSIZE), PGSIZE, (uint64)new_pa, prot_to_type(PROT_WRITE | PROT_READ, 1));
-  memcpy(new_pa, (void*)pa, PGSIZE);
 }
