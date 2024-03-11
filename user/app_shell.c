@@ -9,33 +9,15 @@
 
 int main(int argc, char *argv[]) { //char **
   printu("\n======== Shell Start ========\n\n");
-  int fd;
-  int MAXBUF = 1024;
-  char buf[MAXBUF];
-  char *token;
-  char delim[3] = " \n";
-  fd = open("/shellrc", O_RDONLY);
-
-  read_u(fd, buf, MAXBUF);
-  close(fd);
-  char *command = naive_malloc();
-  char *para = naive_malloc();
-  int start = 0;
+  char command[128];
+  char para[128];
   while (1)
   {
-    if(!start) {
-      token = strtok(buf, delim);
-      start = 1;
-    }
-    else 
-      token = strtok(NULL, delim);
-    strcpy(command, token);
-    token = strtok(NULL, delim);
-    strcpy(para, token);
+    printu("miles@Chenxuan-MacBook % ");
+    scanfu("%s %s", command, para);
     if(strcmp(command, "END") == 0 && strcmp(para, "END") == 0)
       break;
-    printu("Next command: %s %s\n\n", command, para);
-    printu("==========Command Start============\n\n");
+    printu("==========Command Start============\n");
     int pid = fork();
     if(pid == 0) {
       int ret = exec(command, para); //para char *
@@ -45,7 +27,7 @@ int main(int argc, char *argv[]) { //char **
     else
     {
       wait(pid);
-      printu("==========Command End============\n\n");
+      printu("==========Command End============\n");
     }
   }
   exit(0);

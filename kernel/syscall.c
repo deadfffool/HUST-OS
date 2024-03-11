@@ -66,16 +66,15 @@ uint64 sys_user_allocate_page() {
   if (current->user_heap.free_pages_count > 0) {
     va =  current->user_heap.free_pages_address[--current->user_heap.free_pages_count];
     assert(va < current->user_heap.heap_top);
-  } else {
+  } 
+  else {
     // otherwise, allocate a new page (this increases the size of the heap by one page)
     va = current->user_heap.heap_top;
     current->user_heap.heap_top += PGSIZE;
-
     current->mapped_info[HEAP_SEGMENT].npages++;
   }
   user_vm_map((pagetable_t)current->pagetable, va, PGSIZE, (uint64)pa,
          prot_to_type(PROT_WRITE | PROT_READ, 1));
-
   return va;
 }
 
