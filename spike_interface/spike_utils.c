@@ -79,6 +79,10 @@ void sprint(const char* s, ...) {
   va_end(vl);
 }
 
+void sscanf(char* s, ...) {
+  int read_len = spike_file_read(stdin, s, 256);
+}
+
 //===============    Spike-assisted termination, panic and assert    ===============
 void poweroff(uint16_t code) {
   assert(htif);

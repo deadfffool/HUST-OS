@@ -35,6 +35,11 @@ ssize_t sys_user_print(const char* buf, size_t n) {
 
 // added challengex
 ssize_t sys_user_scanf(const char* buf, size_t n) {
+  // buf is now an address in user space of the given app's user stack,
+  // so we have to transfer it into phisical address (kernel is running in direct mapping).
+  assert( current );
+  char* pa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), (void*)buf);
+  sscanf(pa);
   return 0;
 }
 

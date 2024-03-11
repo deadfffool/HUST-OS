@@ -11,6 +11,7 @@ long frontend_syscall(long n, uint64 a0, uint64 a1, uint64 a2, uint64 a3, uint64
 
 void poweroff(uint16 code) __attribute((noreturn));
 void sprint(const char* s, ...);
+void sscanf(char* s, ...);
 void putstring(const char* s);
 void shutdown(int) __attribute__((noreturn));
 
