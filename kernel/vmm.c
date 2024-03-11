@@ -16,16 +16,19 @@
 // establish mapping of virtual address [va, va+size] to phyiscal address [pa, pa+size]
 // with the permission of "perm".
 //
-int map_pages(pagetable_t page_dir, uint64 va, uint64 size, uint64 pa, int perm) {
+int map_pages(pagetable_t page_dir, uint64 va, uint64 size, uint64 pa, int perm)
+{
   uint64 first, last;
   pte_t *pte;
-
-  for (first = ROUNDDOWN(va, PGSIZE), last = ROUNDDOWN(va + size - 1, PGSIZE); first <= last; first += PGSIZE, pa += PGSIZE) 
+  for (first = ROUNDDOWN(va, PGSIZE), last = ROUNDDOWN(va + size - 1, PGSIZE); first <= last; first += PGSIZE, pa += PGSIZE)
   {
-    if ((pte = page_walk(page_dir, first, 1)) == 0) 
+    if ((pte = page_walk(page_dir, first, 1)) == 0)
       return -1;
     if (*pte & PTE_V)
-      panic("map_pages fails on mapping va (0x%lx) to pa (0x%lx)", first, pa);
+    {
+      sprint("map_pages fails on mapping va 0x%x to pa 0x%x\n", first, pa);
+      panic("map_pages fails!");
+    }
     *pte = PA2PTE(pa) | perm | PTE_V;
   }
   return 0;
@@ -49,8 +52,9 @@ uint64 prot_to_type(int prot, int user) {
 // traverse the page table (starting from page_dir) to find the corresponding pte of va.
 // returns: PTE (page table entry) pointing to va.
 //
-pte_t *page_walk(pagetable_t page_dir, uint64 va, int alloc) {
-  if (va >= MAXVA) 
+pte_t *page_walk(pagetable_t page_dir, uint64 va, int alloc)
+{
+  if (va >= MAXVA)
     panic("page_walk");
 
   // starting from the page directory
@@ -59,28 +63,30 @@ pte_t *page_walk(pagetable_t page_dir, uint64 va, int alloc) {
   // traverse from page directory to page table.
   // as we use risc-v sv39 paging scheme, there will be 3 layers: page dir,
   // page medium dir, and page table.
-  for (int level = 2; level > 0; level--) {
+  for (int level = 2; level > 0; level--)
+  {
     // macro "PX" gets the PTE index in page table of current level
     // "pte" points to the entry of current level
     pte_t *pte = pt + PX(level, va);
 
     // now, we need to know if above pte is valid (established mapping to a phyiscal page)
     // or not.
-    if (*pte & PTE_V) 
-    {  //PTE valid
+    if (*pte & PTE_V)
+    { // PTE valid
       // phisical address of pagetable of next level
       pt = (pagetable_t)PTE2PA(*pte);
-    } 
-    else 
-    { //PTE invalid (not exist).
+    }
+    else
+    { // PTE invalid (not exist).
       // allocate a page (to be the new pagetable), if alloc == 1
-      if( alloc && ((pt = (pte_t *)alloc_page()) != 0) ){
+      if (alloc && ((pt = (pte_t *)alloc_page(1)) != 0))
+      {
         memset(pt, 0, PGSIZE);
         // writes the physical address of newly allocated page to pte, to establish the
         // page table tree.
         *pte = PA2PTE(pt) | PTE_V;
       }
-      else //returns NULL, if alloc == 0, or no more physical page remains
+      else // returns NULL, if alloc == 0, or no more physical page remains
         return 0;
     }
   }

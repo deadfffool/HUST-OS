@@ -56,25 +56,31 @@ ssize_t sys_user_exit(uint64 code) {
 //
 // maybe, the simplest implementation of malloc in the world ... added @lab2_2
 //
-uint64 sys_user_allocate_page() {
-  void* pa = alloc_page();
+uint64 sys_user_allocate_page()
+{
+  void *pa = alloc_page();
   uint64 va;
   // if there are previously reclaimed pages, use them first (this does not change the
   // size of the heap)
-  if (current->user_heap.free_pages_count > 0) {
-    va =  current->user_heap.free_pages_address[--current->user_heap.free_pages_count];
+  if (current->user_heap.free_pages_count > 0)
+  {
+    va = current->user_heap.free_pages_address[--(current)->user_heap.free_pages_count];
     assert(va < current->user_heap.heap_top);
-  } 
-  else {
+  }
+  else
+  {
     // otherwise, allocate a new page (this increases the size of the heap by one page)
     va = current->user_heap.heap_top;
     current->user_heap.heap_top += PGSIZE;
     current->mapped_info[HEAP_SEGMENT].npages++;
   }
+  // sprint("0x%x\n",ROUNDDOWN(va, PGSIZE));
   user_vm_map((pagetable_t)current->pagetable, va, PGSIZE, (uint64)pa,
-         prot_to_type(PROT_WRITE | PROT_READ, 1));
+              prot_to_type(PROT_WRITE | PROT_READ, 1));
+
   return va;
 }
+
 
 //
 // reclaim a page, indicated by "va". added @lab2_2
@@ -334,7 +340,7 @@ long sys_user_sem_V(int mutex)
 ssize_t sys_user_printpa(uint64 va)
 {
   uint64 pa = (uint64)user_va_to_pa((pagetable_t)(current->pagetable), (void*)va);
-  sprint("%lx\n", pa);
+  sprint("0x%x\n", pa);
   return 0;
 }
 

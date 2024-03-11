@@ -357,6 +357,7 @@ void do_exec(char * filename,char * argv)
   current->tick_count = p->tick_count;
   current->pfiles = p->pfiles;
   
+  // better malloc
   void * pa = alloc_page();
   uint64 va = g_ufree_page;
   g_ufree_page += PGSIZE;
@@ -364,6 +365,7 @@ void do_exec(char * filename,char * argv)
   current->master = (block*)pa;
   memset(pa,0,PGSIZE);
   
+  // args
   size_t * vsp, * sp;
   vsp = (size_t *)current->trapframe->regs.sp;
   vsp -= 8;
@@ -510,7 +512,7 @@ uint64 better_alloc(uint64 size)
   b->size -= size;
   b->va += size;
   b->pa += size;
-  // sprint("malloc: %x\n",new_b->va);
+  sprint("malloc: %x\n",new_b->va);
   return new_b->va;
 }
 

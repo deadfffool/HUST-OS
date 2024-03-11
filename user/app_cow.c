@@ -9,7 +9,7 @@
 #include "util/types.h"
 
 int main(void) {
-  int *heap_data = (int *)naive_malloc();
+  int *heap_data = naive_malloc();
   printu("the physical address of parent process heap is: ");
   printpa(heap_data);
   int pid = fork();

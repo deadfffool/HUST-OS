@@ -9,7 +9,6 @@
 typedef unsigned long long uint64;
 
 int main(void) {
-  printu("malloc test!\n");
   char str[20] = "hello, world!!!";
   char *m = (char *)better_malloc(100);
   printu("user malloc 1\n");

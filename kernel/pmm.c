@@ -37,7 +37,7 @@ static void create_freepage_list(uint64 start, uint64 end) {
 //
 void free_page(void *pa) {
   if (((uint64)pa % PGSIZE) != 0 || (uint64)pa < free_mem_start_addr || (uint64)pa >= free_mem_end_addr)
-    panic("free_page 0x%lx \n", pa);
+    panic("free_page 0x%x \n", pa);
 
   // insert a physical page to g_free_mem_list
   list_node *n = (list_node *)pa;
