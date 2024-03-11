@@ -7,7 +7,7 @@
 
 #include "user_lib.h"
 #include "util/types.h"
-#include "util/snprintf.h"
+#include "util/std.h"
 #include "kernel/syscall.h"
 
 uint64 do_user_call(uint64 sysnum, uint64 a1, uint64 a2, uint64 a3, uint64 a4, uint64 a5, uint64 a6,

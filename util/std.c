@@ -2,7 +2,7 @@
  * vsnprintf() is borrowed from pk.
  */
 
-#include "util/snprintf.h"
+#include "util/std.h"
 
 int32 vsnprintf(char* out, size_t n, const char* s, va_list vl) {
   bool format = FALSE;

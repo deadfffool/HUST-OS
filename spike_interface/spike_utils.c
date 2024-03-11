@@ -7,7 +7,7 @@
 #include "atomic.h"
 #include "spike_htif.h"
 #include "util/functions.h"
-#include "util/snprintf.h"
+#include "util/std.h"
 #include "spike_utils.h"
 #include "spike_file.h"
 

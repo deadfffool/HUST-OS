@@ -1,6 +1,6 @@
 // borrowed from https://github.com/riscv/riscv-pk : util/snprintf.c
-#ifndef _SNPRINTF_H
-#define _SNPRINTF_H
+#ifndef _STD_H
+#define _STD_H
 
 #include <stdarg.h>
 #include <string.h>
