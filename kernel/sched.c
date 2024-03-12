@@ -109,19 +109,22 @@ void schedule() {
           i, procs[i].status );
       }
 
-    if( should_shutdown ){
+    if( should_shutdown )
+    {
       sprint( "no more ready processes, system shutdown now.\n" );
       shutdown( 0 );
-    }else{
+    }
+    else
+    {
       panic( "Not handled: we should let system wait for unfinished processes.\n" );
     }
   }
 
-  current = ready_queue_head;
-  assert( current->status == READY );
+  current[mycpu()] = ready_queue_head;
+  assert( current[mycpu()]->status == READY );
   ready_queue_head = ready_queue_head->queue_next;
 
-  current->status = RUNNING;
+  current[mycpu()]->status = RUNNING;
   // sprint( "going to schedule process %d to run.\n", current->pid );
-  switch_to( current );
+  switch_to( current[mycpu()] );
 }

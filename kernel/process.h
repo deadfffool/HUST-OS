@@ -31,6 +31,7 @@ enum proc_status {
   RUNNING,         // currently running
   BLOCKED,         // waiting for something
   ZOMBIE,          // terminated but not reclaimed yet
+  USED,
 };
 
 // types of a segment
@@ -140,7 +141,6 @@ int do_fork(process* parent);
 int do_cow_fork(process* parent); 
 ssize_t do_wait(uint64 pid);
 // current running process
-extern process* current;
 void do_exec(char * filename,char * para);
 // better malloc
 uint64 better_alloc(uint64 size);
@@ -157,5 +157,10 @@ long do_sem_new(int resource);
 void do_sem_P(int mutex);
 void do_sem_V(int mutex);
 void insert_to_waiting_queue(int mutex);
+
+
+extern process* current[NCPU];
+
+extern uint64 g_ufree_page[NCPU];
 
 #endif

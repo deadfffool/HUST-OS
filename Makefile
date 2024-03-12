@@ -153,6 +153,12 @@ USER_X_CPPS 		:= user/app_scanf.c user/user_lib.c
 USER_X_OBJS  		:= $(addprefix $(OBJ_DIR)/, $(patsubst %.c,%.o,$(USER_X_CPPS)))
 
 USER_X_TARGET 	:= $(HOSTFS_ROOT)/bin/scanf
+
+USER_Y_CPPS 		:= user/app_hello.c user/user_lib.c
+
+USER_Y_OBJS  		:= $(addprefix $(OBJ_DIR)/, $(patsubst %.c,%.o,$(USER_Y_CPPS)))
+
+USER_Y_TARGET 	:= $(HOSTFS_ROOT)/bin/hello
 #------------------------targets------------------------
 $(OBJ_DIR):
 	@-mkdir -p $(OBJ_DIR)	
@@ -174,6 +180,7 @@ $(OBJ_DIR):
 	@-mkdir -p $(dir $(USER_H_OBJS))
 	@-mkdir -p $(dir $(USER_G_OBJS))
 	@-mkdir -p $(dir $(USER_X_OBJS))
+	@-mkdir -p $(dir $(USER_Y_OBJS))
 
 $(OBJ_DIR)/%.o : %.c
 	@echo "compiling" $<
@@ -289,17 +296,23 @@ $(USER_X_TARGET): $(OBJ_DIR) $(UTIL_LIB) $(USER_X_OBJS)
 	@$(COMPILE) --entry=main $(USER_X_OBJS) $(UTIL_LIB) -o $@
 	@echo "User app has been built into" \"$@\"
 
+$(USER_Y_TARGET): $(OBJ_DIR) $(UTIL_LIB) $(USER_Y_OBJS)
+	@echo "linking" $@	...	
+	-@mkdir -p $(HOSTFS_ROOT)/bin
+	@$(COMPILE) --entry=main $(USER_Y_OBJS) $(UTIL_LIB) -o $@
+	@echo "User app has been built into" \"$@\"
+
 -include $(wildcard $(OBJ_DIR)/*/*.d)
 -include $(wildcard $(OBJ_DIR)/*/*/*.d)
 
 .DEFAULT_GOAL := $(all)
 
-all: $(KERNEL_TARGET) $(USER_TARGET) $(USER_E_TARGET) $(USER_M_TARGET) $(USER_T_TARGET) $(USER_C_TARGET) $(USER_O_TARGET) $(USER_B_TARGET) $(USER_S_TARGET) $(USER_R_TARGET) $(USER_W_TARGET) $(USER_A_TARGET) $(USER_D_TARGET) $(USER_H_TARGET) $(USER_G_TARGET) $(USER_X_TARGET)
+all: $(KERNEL_TARGET) $(USER_TARGET) $(USER_E_TARGET) $(USER_M_TARGET) $(USER_T_TARGET) $(USER_C_TARGET) $(USER_O_TARGET) $(USER_B_TARGET) $(USER_S_TARGET) $(USER_R_TARGET) $(USER_W_TARGET) $(USER_A_TARGET) $(USER_D_TARGET) $(USER_H_TARGET) $(USER_G_TARGET) $(USER_X_TARGET) $(USER_Y_TARGET)
 .PHONY:all
 
-run: $(KERNEL_TARGET) $(USER_TARGET) $(USER_E_TARGET) $(USER_M_TARGET) $(USER_T_TARGET) $(USER_C_TARGET) $(USER_O_TARGET) $(USER_B_TARGET) $(USER_S_TARGET) $(USER_R_TARGET) $(USER_W_TARGET) $(USER_A_TARGET) $(USER_D_TARGET) $(USER_H_TARGET) $(USER_G_TARGET) $(USER_X_TARGET)
+run: $(KERNEL_TARGET) $(USER_TARGET) $(USER_E_TARGET) $(USER_M_TARGET) $(USER_T_TARGET) $(USER_C_TARGET) $(USER_O_TARGET) $(USER_B_TARGET) $(USER_S_TARGET) $(USER_R_TARGET) $(USER_W_TARGET) $(USER_A_TARGET) $(USER_D_TARGET) $(USER_H_TARGET) $(USER_G_TARGET) $(USER_X_TARGET) $(USER_Y_TARGET)
 	@echo "********************HUST PKE********************"
-	spike $(KERNEL_TARGET) /bin/shell
+	spike -p2 $(KERNEL_TARGET) /bin/shell /bin/hello
 
 # need openocd!
 gdb:$(KERNEL_TARGET) $(USER_TARGET)

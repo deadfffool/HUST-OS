@@ -3,6 +3,7 @@
 #include "riscv.h"
 #include "config.h"
 #include "util/string.h"
+#include "sync.h"
 #include "memlayout.h"
 #include "spike_interface/spike_utils.h"
 
@@ -14,6 +15,8 @@ extern uint64 g_mem_size;
 
 static uint64 free_mem_start_addr;  //beginning address of free memory
 static uint64 free_mem_end_addr;    //end address of free memory (not included)
+
+spinlock lock;
 
 typedef struct node {
   struct node *next;
@@ -50,23 +53,26 @@ void free_page(void *pa) {
 // Allocates only ONE page!
 //
 void *alloc_page(void) {
+  acquire(&lock);
   list_node *n = g_free_mem_list.next;
-  if (n) 
+  if (n!=0)
     g_free_mem_list.next = n->next;
+  release(&lock);
   return (void *)n;
 }
 
 
 void *alloc_two_page(void)
 {
+  acquire(&lock);
   list_node *n = g_free_mem_list.next;
   while(n->next->next && (uint64)(n->next) - PGSIZE != (uint64)(n->next->next))
     n = n->next;
   if(!n->next->next)
     panic("alloc two page fault!");
   void * ret = (void*) n->next->next;
-  // sprint("0x%x  0x%x\n",(uint64)n->next,(uint64)n->next->next);
   n->next = n->next->next->next;
+  release(&lock);
   return ret;
 }
 //

@@ -14,6 +14,7 @@
 #include "sched.h"
 #include "proc_file.h"
 #include "elf.h"
+#include "sync.h"
 #include "spike_interface/spike_utils.h"
 
 extern Symbols symbols[64];
@@ -25,18 +26,19 @@ extern int count;
 ssize_t sys_user_print(const char* buf, size_t n) {
   // buf is now an address in user space of the given app's user stack,
   // so we have to transfer it into phisical address (kernel is running in direct mapping).
-  assert( current );
-  char* pa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), (void*)buf);
-  sprint(pa);
+  assert( current[mycpu()] );
+  char* pa = (char*)user_va_to_pa((pagetable_t)(current[mycpu()]->pagetable), (void*)buf);
+  sprint("%s",pa);
   return 0;
 }
+
 
 // added challengex
 ssize_t sys_user_scanf(const char* buf, size_t n) {
   // buf is now an address in user space of the given app's user stack,
   // so we have to transfer it into phisical address (kernel is running in direct mapping).
-  assert( current );
-  char* pa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), (void*)buf);
+  assert( current[mycpu()] );
+  char* pa = (char*)user_va_to_pa((pagetable_t)(current[mycpu()]->pagetable), (void*)buf);
   sscanf(pa);
   return 0;
 }
@@ -45,13 +47,22 @@ ssize_t sys_user_scanf(const char* buf, size_t n) {
 //
 // implement the SYS_user_exit syscall
 //
+int flag = 0;
 ssize_t sys_user_exit(uint64 code) {
-  sprint("User exit with code:%d.\n", code);
-  // reclaim the current process, and reschedule. added @lab3_1
-  free_process( current );
-  schedule();
+  sprint("hartid = %d: User exit with code: %d.\n",mycpu(), code);
+  if (mycpu() == 0)
+  {
+    free_process( current[mycpu()] );
+    schedule();
+  }
+  else
+  {
+    free_process( current[mycpu()] );
+    while(1);
+  }
   return 0;
 }
+
 
 //
 // maybe, the simplest implementation of malloc in the world ... added @lab2_2
@@ -62,20 +73,20 @@ uint64 sys_user_allocate_page()
   uint64 va;
   // if there are previously reclaimed pages, use them first (this does not change the
   // size of the heap)
-  if (current->user_heap.free_pages_count > 0)
+  if (current[mycpu()]->user_heap.free_pages_count > 0)
   {
-    va = current->user_heap.free_pages_address[--(current)->user_heap.free_pages_count];
-    assert(va < current->user_heap.heap_top);
+    va = current[mycpu()]->user_heap.free_pages_address[--(current[mycpu()])->user_heap.free_pages_count];
+    assert(va < current[mycpu()]->user_heap.heap_top);
   }
   else
   {
     // otherwise, allocate a new page (this increases the size of the heap by one page)
-    va = current->user_heap.heap_top;
-    current->user_heap.heap_top += PGSIZE;
-    current->mapped_info[HEAP_SEGMENT].npages++;
+    va = current[mycpu()]->user_heap.heap_top;
+    current[mycpu()]->user_heap.heap_top += PGSIZE;
+    current[mycpu()]->mapped_info[HEAP_SEGMENT].npages++;
   }
   // sprint("0x%x\n",ROUNDDOWN(va, PGSIZE));
-  user_vm_map((pagetable_t)current->pagetable, va, PGSIZE, (uint64)pa,
+  user_vm_map((pagetable_t)current[mycpu()]->pagetable, va, PGSIZE, (uint64)pa,
               prot_to_type(PROT_WRITE | PROT_READ, 1));
 
   return va;
@@ -86,9 +97,9 @@ uint64 sys_user_allocate_page()
 // reclaim a page, indicated by "va". added @lab2_2
 //
 uint64 sys_user_free_page(uint64 va) {
-  user_vm_unmap((pagetable_t)current->pagetable, va, PGSIZE, 1);
+  user_vm_unmap((pagetable_t)current[mycpu()]->pagetable, va, PGSIZE, 1);
   // add the reclaimed page to the free page list
-  current->user_heap.free_pages_address[current->user_heap.free_pages_count++] = va;
+  current[mycpu()]->user_heap.free_pages_address[current[mycpu()]->user_heap.free_pages_count++] = va;
   return 0;
 }
 
@@ -97,7 +108,7 @@ uint64 sys_user_free_page(uint64 va) {
 //
 ssize_t sys_user_fork() {
   // sprint("User call fork.\n");
-  return do_fork( current );
+  return do_fork( current[mycpu()] );
 }
 
 //
@@ -106,10 +117,10 @@ ssize_t sys_user_fork() {
 ssize_t sys_user_yield() {
   // TODO (lab3_2): implment the syscall of yield.
   // hint: the functionality of yield is to give up the processor. therefore,
-  // we should set the status of currently running process to READY, insert it in
+  // we should set the status of current[mycpu()]ly running process to READY, insert it in
   // the rear of ready queue, and finally, schedule a READY process to run.
-  current->status = READY;
-  insert_to_ready_queue(current);
+  current[mycpu()]->status = READY;
+  insert_to_ready_queue(current[mycpu()]);
   schedule();
   return 0;
 }
@@ -126,7 +137,7 @@ ssize_t sys_user_wait(long pid) {
 //
 ssize_t sys_user_open(char *pathva, int flags) {
   char resultpath[256];
-  char* pathpa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), pathva);
+  char* pathpa = (char*)user_va_to_pa((pagetable_t)(current[mycpu()]->pagetable), pathva);
   change_path(resultpath, pathpa);
   return do_open(resultpath, flags);
 }
@@ -138,7 +149,7 @@ ssize_t sys_user_read(int fd, char *bufva, uint64 count) {
   int i = 0;
   while (i < count) { // count can be greater than page size
     uint64 addr = (uint64)bufva + i;
-    uint64 pa = lookup_pa((pagetable_t)current->pagetable, addr);
+    uint64 pa = lookup_pa((pagetable_t)current[mycpu()]->pagetable, addr);
     uint64 off = addr - ROUNDDOWN(addr, PGSIZE);
     uint64 len = count - i < PGSIZE - off ? count - i : PGSIZE - off;
     uint64 r = do_read(fd, (char *)pa + off, len);
@@ -154,7 +165,7 @@ ssize_t sys_user_write(int fd, char *bufva, uint64 count) {
   int i = 0;
   while (i < count) { // count can be greater than page size
     uint64 addr = (uint64)bufva + i;
-    uint64 pa = lookup_pa((pagetable_t)current->pagetable, addr);
+    uint64 pa = lookup_pa((pagetable_t)current[mycpu()]->pagetable, addr);
     uint64 off = addr - ROUNDDOWN(addr, PGSIZE);
     uint64 len = count - i < PGSIZE - off ? count - i : PGSIZE - off;
     uint64 r = do_write(fd, (char *)pa + off, len);
@@ -165,15 +176,15 @@ ssize_t sys_user_write(int fd, char *bufva, uint64 count) {
 
 
 ssize_t sys_user_rcwd(char *path){
-  strcpy((char*)user_va_to_pa((pagetable_t)current->pagetable,path),current->pfiles->cwd->name);
+  strcpy((char*)user_va_to_pa((pagetable_t)current[mycpu()]->pagetable,path),current[mycpu()]->pfiles->cwd->name);
   return 0;
 }
 
 ssize_t sys_user_ccwd(char *path){
   char resultpath[256];
-  char* pathpa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), path);
+  char* pathpa = (char*)user_va_to_pa((pagetable_t)(current[mycpu()]->pagetable), path);
   change_path(resultpath,pathpa);
-  if((ssize_t)strcpy(current->pfiles->cwd->name,resultpath)==0) 
+  if((ssize_t)strcpy(current[mycpu()]->pfiles->cwd->name,resultpath)==0) 
     return -1;
   return 0;
 }
@@ -190,7 +201,7 @@ ssize_t sys_user_lseek(int fd, int offset, int whence) {
 // read vinode
 //
 ssize_t sys_user_stat(int fd, struct istat *istat) {
-  struct istat * pistat = (struct istat *)user_va_to_pa((pagetable_t)(current->pagetable), istat);
+  struct istat * pistat = (struct istat *)user_va_to_pa((pagetable_t)(current[mycpu()]->pagetable), istat);
   return do_stat(fd, pistat);
 }
 
@@ -198,7 +209,7 @@ ssize_t sys_user_stat(int fd, struct istat *istat) {
 // read disk inode
 //
 ssize_t sys_user_disk_stat(int fd, struct istat *istat) {
-  struct istat * pistat = (struct istat *)user_va_to_pa((pagetable_t)(current->pagetable), istat);
+  struct istat * pistat = (struct istat *)user_va_to_pa((pagetable_t)(current[mycpu()]->pagetable), istat);
   return do_disk_stat(fd, pistat);
 }
 
@@ -213,7 +224,7 @@ ssize_t sys_user_close(int fd) {
 // lib call to opendir
 //
 ssize_t sys_user_opendir(char * pathva){
-  char * pathpa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), pathva);
+  char * pathpa = (char*)user_va_to_pa((pagetable_t)(current[mycpu()]->pagetable), pathva);
   char resultpath[256];
   change_path(resultpath,pathpa);
   return do_opendir(resultpath);
@@ -223,7 +234,7 @@ ssize_t sys_user_opendir(char * pathva){
 // lib call to readdir
 //
 ssize_t sys_user_readdir(int fd, struct dir *vdir){
-  struct dir * pdir = (struct dir *)user_va_to_pa((pagetable_t)(current->pagetable), vdir);
+  struct dir * pdir = (struct dir *)user_va_to_pa((pagetable_t)(current[mycpu()]->pagetable), vdir);
   return do_readdir(fd, pdir);
 }
 
@@ -231,7 +242,7 @@ ssize_t sys_user_readdir(int fd, struct dir *vdir){
 // lib call to mkdir
 //
 ssize_t sys_user_mkdir(char * pathva){
-  char * pathpa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), pathva);
+  char * pathpa = (char*)user_va_to_pa((pagetable_t)(current[mycpu()]->pagetable), pathva);
   char resultpath[256];
   change_path(resultpath,pathpa);
   return do_mkdir(resultpath);
@@ -248,8 +259,8 @@ ssize_t sys_user_closedir(int fd){
 // lib call to link
 //
 ssize_t sys_user_link(char * vfn1, char * vfn2){
-  char * pfn1 = (char*)user_va_to_pa((pagetable_t)(current->pagetable), (void*)vfn1);
-  char * pfn2 = (char*)user_va_to_pa((pagetable_t)(current->pagetable), (void*)vfn2);
+  char * pfn1 = (char*)user_va_to_pa((pagetable_t)(current[mycpu()]->pagetable), (void*)vfn1);
+  char * pfn2 = (char*)user_va_to_pa((pagetable_t)(current[mycpu()]->pagetable), (void*)vfn2);
   return do_link(pfn1, pfn2);
 }
 
@@ -257,7 +268,7 @@ ssize_t sys_user_link(char * vfn1, char * vfn2){
 // lib call to unlink
 //
 ssize_t sys_user_unlink(char * vfn){
-  char * pfn = (char*)user_va_to_pa((pagetable_t)(current->pagetable), (void*)vfn);
+  char * pfn = (char*)user_va_to_pa((pagetable_t)(current[mycpu()]->pagetable), (void*)vfn);
   return do_unlink(pfn);
 }
 
@@ -269,26 +280,26 @@ uint64 sys_user_exec(char * filename, char * para)
 {
   char * file_name;
   char * para_;
-  file_name = (char*)user_va_to_pa((pagetable_t)(current->pagetable), filename);
-  para_ = (char*)user_va_to_pa((pagetable_t)(current->pagetable), para);
+  file_name = (char*)user_va_to_pa((pagetable_t)(current[mycpu()]->pagetable), filename);
+  para_ = (char*)user_va_to_pa((pagetable_t)(current[mycpu()]->pagetable), para);
   do_exec(file_name,para_);
   return -1;
 }
 
 // added @lab1c1
 ssize_t sys_user_backtrace(uint64 n){
-  // uint64 current_fp =(current->trapframe->regs.s0+16);
+  // uint64 current[mycpu()]_fp =(current[mycpu()]->trapframe->regs.s0+16);
   // int i = 0;
   // for (i;i<n;i++)
   // {
-    // sprint("fp%d:0x%x\n",i,*(uint64*)(current_fp-8)); 
-    // uint64 code = *(uint64*)(current_fp-8);
+    // sprint("fp%d:0x%x\n",i,*(uint64*)(current[mycpu()]_fp-8)); 
+    // uint64 code = *(uint64*)(current[mycpu()]_fp-8);
     int j;
     for(j=count-1;j>count-2-n;j--){
       // if (symbols[j+1].off<code && code<symbols[j].off)
         sprint("%s\n",symbols[j+1].name);
     }
-    // current_fp = *(uint64*)(current_fp-16);  
+    // current[mycpu()]_fp = *(uint64*)(current[mycpu()]_fp-16);  
   // }
 
   // int i = 0;
@@ -313,7 +324,7 @@ uint64 sys_user_free(uint64 va) {
 //added @lab3_challenge2  sem_new
 long sys_user_sem_new(int resource)
 {
-  //allocate a signal to current process's semaphore
+  //allocate a signal to current[mycpu()] process's semaphore
   //and assign an initial value
   return do_sem_new(resource);
   
@@ -339,7 +350,7 @@ long sys_user_sem_V(int mutex)
 // added lab3c3
 ssize_t sys_user_printpa(uint64 va)
 {
-  uint64 pa = (uint64)user_va_to_pa((pagetable_t)(current->pagetable), (void*)va);
+  uint64 pa = (uint64)user_va_to_pa((pagetable_t)(current[mycpu()]->pagetable), (void*)va);
   sprint("0x%x\n", pa);
   return 0;
 }

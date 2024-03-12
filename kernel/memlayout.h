@@ -17,4 +17,6 @@
 // start virtual address (4MB) of our simple heap. added @lab2_2
 #define USER_FREE_ADDRESS_START 0x00000000 + PGSIZE * 1024
 
+// add lab1c3
+#define HART_STACK_OFFSET 0x300000
 #endif

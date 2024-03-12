@@ -6,6 +6,7 @@
 #include "kernel/riscv.h"
 #include "kernel/config.h"
 #include "spike_interface/spike_utils.h"
+#include "kernel/sync.h"
 
 //
 // global variables are placed in the .data section.
@@ -21,7 +22,9 @@ __attribute__((aligned(16))) char stack0[4096 * NCPU];
 extern void s_start();
 // M-mode trap entry point, added @lab1_2
 extern void mtrapvec();
-
+// Sync
+extern void sync_barrier(volatile int *counter, int all);
+volatile int counter = 0;
 // htif is defined in spike_interface/spike_htif.c, marks the availability of HTIF
 extern uint64 htif;
 // g_mem_size is defined in spike_interface/spike_memory.c, size of the emulated memory
@@ -94,13 +97,14 @@ void m_start(uintptr_t hartid, uintptr_t dtb) {
   // init the spike file interface (stdin,stdout,stderr)
   // functions with "spike_" prefix are all defined in codes under spike_interface/,
   // sprint is also defined in spike_interface/spike_utils.c
-  spike_file_init();
-  sprint("In m_start, hartid:%d\n", hartid);
-
-  // init HTIF (Host-Target InterFace) and memory by using the Device Table Blob (DTB)
-  // init_dtb() is defined above.
-  init_dtb(dtb);
-
+  if(hartid == 0)
+  {
+    spike_file_init();
+    // init HTIF (Host-Target InterFace) and memory by using the Device Table Blob (DTB)
+    // init_dtb() is defined above.
+    init_dtb(dtb);
+  }
+  sync_barrier(&counter,NCPU);
   // save the address of trap frame for interrupt in M mode to "mscratch". added @lab1_2
   write_csr(mscratch, &g_itrframe);
 
@@ -128,5 +132,7 @@ void m_start(uintptr_t hartid, uintptr_t dtb) {
   timerinit(hartid);
 
   // switch to supervisor mode (S mode) and jump to s_start(), i.e., set pc to mepc
+  write_tp(hartid);
+  sprint("In m_start, hartid:%d\n", hartid);
   asm volatile("mret");
 }

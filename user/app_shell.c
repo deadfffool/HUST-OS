@@ -8,7 +8,7 @@
 #include "util/types.h"
 
 int main(int argc, char *argv[]) { //char **
-  printu("\nWelcome! \n\n");
+  printu("\nWelcome from hart 0! \n\n");
   char command[128];
   char para[128];
   char cwd[128];
