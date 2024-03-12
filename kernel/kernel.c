@@ -106,10 +106,6 @@ int s_start(void) {
     // init file system, added @lab4_1
     fs_init();
   }
-  if(mycpu()==0)
-  {
-    enable_paging();
-  }
   sync_barrier(&barrier,NCPU);
   // now, switch to paging mode by turning on paging (SV39)
 
