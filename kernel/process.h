@@ -158,9 +158,6 @@ void do_sem_P(int mutex);
 void do_sem_V(int mutex);
 void insert_to_waiting_queue(int mutex);
 
-
 extern process* current[NCPU];
-
-extern uint64 g_ufree_page[NCPU];
 
 #endif

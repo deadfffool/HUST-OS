@@ -39,9 +39,6 @@ spinlock procs_lock;
 // current points to the currently running user-mode application.
 process* current[NCPU];
 
-// points to the first free page in our simple heap. added @lab2_2
-uint64 g_ufree_page[NCPU] = {USER_FREE_ADDRESS_START,USER_FREE_ADDRESS_START};
-
 int cur=0;
 semphore signal[SEM_MAX];
 //
@@ -372,8 +369,9 @@ void do_exec(char * filename,char * argv)
   
   // better malloc
   void * pa = alloc_page();
-  uint64 va = g_ufree_page[mycpu()];
-  g_ufree_page[mycpu()] += PGSIZE;
+  uint64 va = current[mycpu()]->user_heap.heap_top;
+  current[mycpu()]->user_heap.heap_top += PGSIZE;
+  current[mycpu()]->mapped_info[HEAP_SEGMENT].npages++;
   user_vm_map((pagetable_t)current[mycpu()]->pagetable, va, PGSIZE, (uint64)pa,prot_to_type(PROT_WRITE | PROT_READ, 1));
   current[mycpu()]->master = (block*)pa;
   memset(pa,0,PGSIZE);
@@ -492,8 +490,9 @@ block* findx(uint64 mark,uint64 size,uint64 va)
 block* alloc_block()
 {
     void * pa = alloc_page();
-    uint64 va = g_ufree_page[mycpu()];
-    g_ufree_page[mycpu()] += PGSIZE;
+    uint64 va = current[mycpu()]->user_heap.heap_top;
+    current[mycpu()]->user_heap.heap_top += PGSIZE;
+    current[mycpu()]->mapped_info[HEAP_SEGMENT].npages++;
     user_vm_map((pagetable_t)current[mycpu()]->pagetable, va, PGSIZE, (uint64)pa,prot_to_type(PROT_WRITE | PROT_READ, 1));
     //place the block struct in master
     block *b = findx(0,0,0);
