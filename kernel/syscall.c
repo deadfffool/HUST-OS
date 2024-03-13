@@ -107,7 +107,6 @@ uint64 sys_user_free_page(uint64 va) {
 // kerenl entry point of naive_fork
 //
 ssize_t sys_user_fork() {
-  // sprint("User call fork.\n");
   return do_fork( current[mycpu()] );
 }
 
@@ -115,10 +114,6 @@ ssize_t sys_user_fork() {
 // kerenl entry point of yield. added @lab3_2
 //
 ssize_t sys_user_yield() {
-  // TODO (lab3_2): implment the syscall of yield.
-  // hint: the functionality of yield is to give up the processor. therefore,
-  // we should set the status of current[mycpu()]ly running process to READY, insert it in
-  // the rear of ready queue, and finally, schedule a READY process to run.
   current[mycpu()]->status = READY;
   insert_to_ready_queue(current[mycpu()]);
   schedule();
@@ -288,24 +283,9 @@ uint64 sys_user_exec(char * filename, char * para)
 
 // added @lab1c1
 ssize_t sys_user_backtrace(uint64 n){
-  // uint64 current[mycpu()]_fp =(current[mycpu()]->trapframe->regs.s0+16);
-  // int i = 0;
-  // for (i;i<n;i++)
-  // {
-    // sprint("fp%d:0x%x\n",i,*(uint64*)(current[mycpu()]_fp-8)); 
-    // uint64 code = *(uint64*)(current[mycpu()]_fp-8);
-    int j;
-    for(j=count-1;j>count-2-n;j--){
-      // if (symbols[j+1].off<code && code<symbols[j].off)
-        sprint("%s\n",symbols[j+1].name);
-    }
-    // current[mycpu()]_fp = *(uint64*)(current[mycpu()]_fp-16);  
-  // }
-
-  // int i = 0;
-  // for(i=0;i<count;i++)
-  //   sprint("0x%lx    %s\n",symbols[i].off,symbols[i].name);
-
+  int j;
+  for(j=count-1;j>count-2-n;j--)
+    sprint("%s\n",symbols[j+1].name);
   return 0;
 }
 

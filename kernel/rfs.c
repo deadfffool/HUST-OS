@@ -485,15 +485,6 @@ struct vinode *rfs_create(struct vinode *parent, struct dentry *sub_dentry) {
     panic("rfs_create: no more free disk inode, we cannot create file.\n" );
 
   // initialize the states of the file being created
-
-  // TODO (lab4_1): implement the code for populating the disk inode (free_dinode) 
-  // of a new file being created.
-  // hint:  members of free_dinode to be filled are:
-  // size, should be zero for a new file.
-  // type, see kernel/rfs.h and find the type for a rfs file.
-  // nlinks, i.e., the number of links.
-  // blocks, i.e., its block count.
-  // Note: DO NOT DELETE CODE BELOW PANIC.
   free_dinode->size = 0; // Set the size to 0 for a new file.
   free_dinode->type = R_FILE; // Set the type to the appropriate RFS file type (e.g., R_FILE).
   free_dinode->nlinks = 1; // Set the number of links to 1 for a new file.
@@ -581,33 +572,17 @@ int rfs_disk_stat(struct vinode *vinode, struct istat *istat) {
 // create a hard link under a direntry "parent" for an existing file of "link_node"
 //
 int rfs_link(struct vinode *parent, struct dentry *sub_dentry, struct vinode *link_node) {
-  // TODO (lab4_3): we now need to establish a hard link to an existing file whose vfs
-  // inode is "link_node". To do that, we need first to know the name of the new (link)
-  // file, and then, we need to increase the link count of the existing file. Lastly, 
-  // we need to make the changes persistent to disk. To know the name of the new (link)
-  // file, you need to stuty the structure of dentry, that contains the name member;
-  // To incease the link count of the existing file, you need to study the structure of
-  // vfs inode, since it contains the inode information of the existing file.
-  //
-  // hint: to accomplish this experiment, you need to:
-  // 1) increase the link count of the file to be hard-linked;
-  // 2) append the new (link) file as a dentry to its parent directory; you can use 
-  //    rfs_add_direntry here.
-  // 3) persistent the changes to disk. you can use rfs_write_back_vinode here.
-  //
   const char *link_name = sub_dentry->name;
 
-  // 增加现有文件的链接计数
+  // add nlinks
   link_node->nlinks++;
 
-  // 更新并写回链接节点的链接计数到磁盘
   struct rfs_device *rdev = rfs_device_list[parent->sb->s_dev->dev_id];
   struct rfs_dinode *link_dinode = rfs_read_dinode(rdev, link_node->inum);
   link_dinode->nlinks = link_node->nlinks;
   rfs_write_dinode(rdev, link_dinode, link_node->inum);
   free_page(link_dinode);
 
-  // 将新链接文件添加到父目录
   int result = rfs_add_direntry(parent, link_name, link_node->inum);
   if (result == -1) {
     sprint("rfs_link: rfs_add_direntry failed");
@@ -803,14 +778,6 @@ int rfs_readdir(struct vinode *dir_vinode, struct dir *dir, int *offset) {
       (struct rfs_dir_cache *)dir_vinode->i_fs_info;
   struct rfs_direntry *p_direntry = dir_cache->dir_base_addr + direntry_index;
 
-  // TODO (lab4_2): implement the code to read a directory entry.
-  // hint: in the above code, we had found the directory entry that located at the
-  // *offset, and used p_direntry to point it.
-  // in the remaining processing, we need to return our discovery.
-  // the method of returning is to popular proper members of "dir", more specifically,
-  // dir->name and dir->inum.
-  // note: DO NOT DELETE CODE BELOW PANIC.
-  // Copy the name from the directory entry to the "dir" structure.
   strcpy(dir->name, p_direntry->name);
   dir->name[RFS_MAX_FILE_NAME_LEN - 1] = '\0'; // Ensure null-terminated string.
 

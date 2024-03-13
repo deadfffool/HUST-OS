@@ -22,11 +22,6 @@ static void handle_syscall(trapframe *tf) {
   // for a syscall, we should return to the NEXT instruction after its handling.
   // in RV64G, each instruction occupies exactly 32 bits (i.e., 4 Bytes)
   tf->epc += 4;
-  
-  // TODO (lab1_1): remove the panic call below, and call do_syscall (defined in
-  // kernel/syscall.c) to conduct real operations of the kernel side for a syscall.
-  // IMPORTANT: return value should be returned to user app, or else, you will encounter
-  // problems in later experiments!
   tf->regs.a0 = do_syscall(tf->regs.a0, tf->regs.a1, tf->regs.a2, tf->regs.a3, tf->regs.a4, tf->regs.a5, tf->regs.a6, tf->regs.a7);
 }
 
@@ -38,9 +33,6 @@ static uint64 g_ticks = 0;
 //
 void handle_mtimer_trap() {
   sprint("Ticks %d\n", g_ticks);
-  // TODO (lab1_3): increase g_ticks to record this "tick", and then clear the "SIP"
-  // field in sip register.
-  // hint: use write_csr to disable the SIP_SSIP bit in sip.
   g_ticks++;
   write_csr(sip,0);
 }
@@ -89,10 +81,6 @@ void handle_user_page_fault(uint64 mcause, uint64 sepc, uint64 stval) {
 // implements round-robin scheduling. added @lab3_3
 //
 void rrsched() {
-  // TODO (lab3_3): implements round-robin scheduling.
-  // hint: increase the tick_count member of current process by one, if it is bigger than
-  // TIME_SLICE_LEN (means it has consumed its time slice), change its status into READY,
-  // place it in the rear of ready queue, and finally schedule next process to run.
   if(current[mycpu()]->tick_count + 1 >= TIME_SLICE_LEN){
     current[mycpu()]->tick_count = 0;
     insert_to_ready_queue(current[mycpu()]);

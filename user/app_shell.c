@@ -7,7 +7,7 @@
 #include "string.h"
 #include "util/types.h"
 
-int main(int argc, char *argv[]) { //char **
+int main(int argc, char *argv[]) {
   printu("\nWelcome from hart 0! \n\n");
   char command[128];
   char para[128];
@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) { //char **
     scanfu("%s %s", command, para);
     if(strcmp(command, "q") == 0)
       break;
-    else if(strcmp("cd", command) == 0) // cd command
+    else if(strcmp("cd", command) == 0)
     {
       change_cwd(para);
       continue;
@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) { //char **
       printu("\n==========Command Start============\n");
       int pid = fork();
       if(pid == 0) {
-        int ret = exec(command, para); //para char *
+        int ret = exec(command, para);
         if (ret == -1)
         printu("exec failed!\n");
       }

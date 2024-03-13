@@ -8,7 +8,7 @@
 
 void f8() { 
   printu("back trace the user app in the following:\n");
-  print_backtrace(7); 
+  print_backtrace(8); 
 }
 void f7() { f8(); }
 void f6() { f7(); }
