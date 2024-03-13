@@ -27,14 +27,15 @@ int do_unlink(char *path);
 void fs_init(void);
 
 // data structure that manages all openned files in a PCB
-typedef struct proc_file_management_t {
-  struct dentry *cwd;  // vfs dentry of current working directory
-  struct file opened_files[MAX_FILES];  // opened files array
-  int nfiles;  // the number of files opened by a process
+typedef struct proc_file_management_t
+{
+  struct dentry *cwd;                  // vfs dentry of current working directory
+  struct file opened_files[MAX_FILES]; // opened files array
+  int nfiles;                          // the number of files opened by a process
 } proc_file_management;
 
 proc_file_management *init_proc_file_management(void);
 
 void reclaim_proc_file_management(proc_file_management *pfiles);
-void change_path(char* resultpath, char* pathpa);
+void change_path(char *resultpath, char *pathpa);
 #endif

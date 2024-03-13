@@ -2,7 +2,8 @@
 #include "util/string.h"
 #include "util/types.h"
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   int fd;
   int MAXBUF = 512;
   char buf[MAXBUF];

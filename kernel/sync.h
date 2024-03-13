@@ -3,7 +3,8 @@
 #include "spike_interface/spike_utils.h"
 #include "riscv.h"
 
-static inline void sync_barrier(volatile int *counter, int all) {
+static inline void sync_barrier(volatile int *counter, int all)
+{
 
   int local;
 
@@ -12,39 +13,44 @@ static inline void sync_barrier(volatile int *counter, int all) {
                : "r"(counter), "r"(1)
                : "memory");
 
-  if (local + 1 < all) {
-    do {
+  if (local + 1 < all)
+  {
+    do
+    {
       asm volatile("lw %0, (%1)\n" : "=r"(local) : "r"(counter) : "memory");
     } while (local < all);
   }
 }
 
-typedef struct {
+typedef struct
+{
   volatile uint64 lock;
 } spinlock;
 
-static void spinlock_init(spinlock *lock) {
-    lock->lock = 0;
+static void spinlock_init(spinlock *lock)
+{
+  lock->lock = 0;
 }
 
 static void acquire(spinlock *lk)
 {
   intr_off();
   uint64 value;
-  do{
+  do
+  {
     asm volatile("amoswap.w.aq %0, %1, (%2)"
-                          : "=r"(value)
-                          : "r"(1), "r"(&(lk->lock))
-                          :);
+                 : "=r"(value)
+                 : "r"(1), "r"(&(lk->lock))
+                 :);
   } while (value != 0);
 }
 
 static void release(spinlock *lk)
 {
   asm volatile("amoswap.w.rl x0, %0, (%1)"
-                      :
-                      : "r"(0), "r"(&(lk->lock))
-                      :);
+               :
+               : "r"(0), "r"(&(lk->lock))
+               :);
   intr_on();
 }
 

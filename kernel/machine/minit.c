@@ -41,10 +41,12 @@ riscv_regs g_itrframe;
 // in Intel series CPUs. it records the details of devices and memory of the
 // platform simulated using Spike.
 //
-void init_dtb(uint64 dtb) {
+void init_dtb(uint64 dtb)
+{
   // defined in spike_interface/spike_htif.c, enabling Host-Target InterFace (HTIF)
   query_htif(dtb);
-  if (htif) sprint("HTIF is available!\r\n");
+  if (htif)
+    sprint("HTIF is available!\r\n");
 
   // defined in spike_interface/spike_memory.c, obtain information about emulated memory
   query_mem(dtb);
@@ -55,9 +57,11 @@ void init_dtb(uint64 dtb) {
 // delegate (almost all) interrupts and most exceptions to S-mode.
 // after delegation, syscalls will handled by the PKE OS kernel running in S-mode.
 //
-static void delegate_traps() {
+static void delegate_traps()
+{
   // supports_extension macro is defined in kernel/riscv.h
-  if (!supports_extension('S')) {
+  if (!supports_extension('S'))
+  {
     // confirm that our processor supports supervisor mode. abort if it does not.
     sprint("S mode is not supported.\n");
     return;
@@ -82,9 +86,10 @@ static void delegate_traps() {
 //
 // enabling timer interrupt (irq) in Machine mode. added @lab1_3
 //
-void timerinit(uintptr_t hartid) {
+void timerinit(uintptr_t hartid)
+{
   // fire timer irq after TIMER_INTERVAL from now.
-  *(uint64*)CLINT_MTIMECMP(hartid) = *(uint64*)CLINT_MTIME + TIMER_INTERVAL;
+  *(uint64 *)CLINT_MTIMECMP(hartid) = *(uint64 *)CLINT_MTIME + TIMER_INTERVAL;
 
   // enable machine-mode timer irq in MIE (Machine Interrupt Enable) csr.
   write_csr(mie, read_csr(mie) | MIE_MTIE);
@@ -93,18 +98,19 @@ void timerinit(uintptr_t hartid) {
 //
 // m_start: machine mode C entry point.
 //
-void m_start(uintptr_t hartid, uintptr_t dtb) {
+void m_start(uintptr_t hartid, uintptr_t dtb)
+{
   // init the spike file interface (stdin,stdout,stderr)
   // functions with "spike_" prefix are all defined in codes under spike_interface/,
   // sprint is also defined in spike_interface/spike_utils.c
-  if(hartid == 0)
+  if (hartid == 0)
   {
     spike_file_init();
     // init HTIF (Host-Target InterFace) and memory by using the Device Table Blob (DTB)
     // init_dtb() is defined above.
     init_dtb(dtb);
   }
-  sync_barrier(&counter,NCPU);
+  sync_barrier(&counter, NCPU);
   // save the address of trap frame for interrupt in M mode to "mscratch". added @lab1_2
   write_csr(mscratch, &g_itrframe);
 

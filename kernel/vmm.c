@@ -37,14 +37,21 @@ int map_pages(pagetable_t page_dir, uint64 va, uint64 size, uint64 pa, int perm)
 //
 // convert permission code to permission types of PTE
 //
-uint64 prot_to_type(int prot, int user) {
+uint64 prot_to_type(int prot, int user)
+{
   uint64 perm = 0;
-  if (prot & PROT_READ) perm |= PTE_R | PTE_A;
-  if (prot & PROT_WRITE) perm |= PTE_W | PTE_D;
-  if (prot & PROT_EXEC) perm |= PTE_X | PTE_A;
-  if (perm == 0) perm = PTE_R;
-  if (prot & PROT_COW) perm |= PTE_C | PTE_A;
-  if (user) perm |= PTE_U;
+  if (prot & PROT_READ)
+    perm |= PTE_R | PTE_A;
+  if (prot & PROT_WRITE)
+    perm |= PTE_W | PTE_D;
+  if (prot & PROT_EXEC)
+    perm |= PTE_X | PTE_A;
+  if (perm == 0)
+    perm = PTE_R;
+  if (prot & PROT_COW)
+    perm |= PTE_C | PTE_A;
+  if (user)
+    perm |= PTE_U;
   return perm;
 }
 
@@ -98,11 +105,13 @@ pte_t *page_walk(pagetable_t page_dir, uint64 va, int alloc)
 //
 // look up a virtual page address, return the physical page address or 0 if not mapped.
 //
-uint64 lookup_pa(pagetable_t pagetable, uint64 va) {
+uint64 lookup_pa(pagetable_t pagetable, uint64 va)
+{
   pte_t *pte;
   uint64 pa;
 
-  if (va >= MAXVA) return 0;
+  if (va >= MAXVA)
+    return 0;
 
   pte = page_walk(pagetable, va, 0);
   if (pte == 0 || (*pte & PTE_V) == 0 || ((*pte & PTE_R) == 0 && (*pte & PTE_W) == 0))
@@ -122,15 +131,18 @@ pagetable_t g_kernel_pagetable;
 //
 // maps virtual address [va, va+sz] to [pa, pa+sz] (for kernel).
 //
-void kern_vm_map(pagetable_t page_dir, uint64 va, uint64 pa, uint64 sz, int perm) {
+void kern_vm_map(pagetable_t page_dir, uint64 va, uint64 pa, uint64 sz, int perm)
+{
   // map_pages is defined in kernel/vmm.c
-  if (map_pages(page_dir, va, sz, pa, perm) != 0) panic("kern_vm_map");
+  if (map_pages(page_dir, va, sz, pa, perm) != 0)
+    panic("kern_vm_map");
 }
 
 //
 // kern_vm_init() constructs the kernel page table.
 //
-void kern_vm_init(void) {
+void kern_vm_init(void)
+{
   // pagetable_t is defined in kernel/riscv.h. it's actually uint64*
   pagetable_t t_page_dir;
 
@@ -142,7 +154,7 @@ void kern_vm_init(void) {
   // map virtual address [KERN_BASE, _etext] to physical address [DRAM_BASE, DRAM_BASE+(_etext - KERN_BASE)],
   // to maintain (direct) text section kernel address mapping.
   kern_vm_map(t_page_dir, KERN_BASE, DRAM_BASE, (uint64)_etext - KERN_BASE,
-         prot_to_type(PROT_READ | PROT_EXEC, 0));
+              prot_to_type(PROT_READ | PROT_EXEC, 0));
 
   // sprint("KERN_BASE 0x%lx\n", lookup_pa(t_page_dir, KERN_BASE));
 
@@ -150,7 +162,7 @@ void kern_vm_init(void) {
   // this is important when kernel needs to access the memory content of user's app
   // without copying pages between kernel and user spaces.
   kern_vm_map(t_page_dir, (uint64)_etext, (uint64)_etext, PHYS_TOP - (uint64)_etext,
-         prot_to_type(PROT_READ | PROT_WRITE, 0));
+              prot_to_type(PROT_READ | PROT_WRITE, 0));
 
   sprint("physical address of _etext is: 0x%lx\n", lookup_pa(t_page_dir, (uint64)_etext));
 
@@ -162,19 +174,22 @@ void kern_vm_init(void) {
 // convert and return the corresponding physical address of a virtual address (va) of
 // application.
 //
-void *user_va_to_pa(pagetable_t page_dir, void *va) {
+void *user_va_to_pa(pagetable_t page_dir, void *va)
+{
   // starting from the page directory
   uint64 pa;
   pa = lookup_pa(page_dir, (uint64)va);
   pa = pa + ((uint64)va & ((1 << PGSHIFT) - 1));
-  return (void*)pa;
+  return (void *)pa;
 }
 
 //
 // maps virtual address [va, va+sz] to [pa, pa+sz] (for user application).
 //
-void user_vm_map(pagetable_t page_dir, uint64 va, uint64 size, uint64 pa, int perm) {
-  if (map_pages(page_dir, va, size, pa, perm) != 0) {
+void user_vm_map(pagetable_t page_dir, uint64 va, uint64 size, uint64 pa, int perm)
+{
+  if (map_pages(page_dir, va, size, pa, perm) != 0)
+  {
     panic("fail to user_vm_map .\n");
   }
 }
@@ -183,10 +198,12 @@ void user_vm_map(pagetable_t page_dir, uint64 va, uint64 size, uint64 pa, int pe
 // unmap virtual address [va, va+size] from the user app.
 // reclaim the physical pages if free!=0
 //
-void user_vm_unmap(pagetable_t page_dir, uint64 va, uint64 size, int free) {
+void user_vm_unmap(pagetable_t page_dir, uint64 va, uint64 size, int free)
+{
   pte_t *PTE = page_walk(page_dir, va, 0);
-  if(PTE){
-    if(free)
+  if (PTE)
+  {
+    if (free)
       free_page((void *)(PTE2PA(*PTE)));
     *PTE = *PTE & (~PTE_V);
   }
@@ -195,17 +212,30 @@ void user_vm_unmap(pagetable_t page_dir, uint64 va, uint64 size, int free) {
 //
 // debug function, print the vm space of a process. added @lab3_1
 //
-void print_proc_vmspace(process* proc) {
-  sprint( "======\tbelow is the vm space of process%d\t========\n", proc->pid );
-  for( int i=0; i<proc->total_mapped_region; i++ ){
-    sprint( "-va:%lx, npage:%d, ", proc->mapped_info[i].va, proc->mapped_info[i].npages);
-    switch(proc->mapped_info[i].seg_type){
-      case CODE_SEGMENT: sprint( "type: CODE SEGMENT" ); break;
-      case DATA_SEGMENT: sprint( "type: DATA SEGMENT" ); break;
-      case STACK_SEGMENT: sprint( "type: STACK SEGMENT" ); break;
-      case CONTEXT_SEGMENT: sprint( "type: TRAPFRAME SEGMENT" ); break;
-      case SYSTEM_SEGMENT: sprint( "type: USER KERNEL STACK SEGMENT" ); break;
+void print_proc_vmspace(process *proc)
+{
+  sprint("======\tbelow is the vm space of process%d\t========\n", proc->pid);
+  for (int i = 0; i < proc->total_mapped_region; i++)
+  {
+    sprint("-va:%lx, npage:%d, ", proc->mapped_info[i].va, proc->mapped_info[i].npages);
+    switch (proc->mapped_info[i].seg_type)
+    {
+    case CODE_SEGMENT:
+      sprint("type: CODE SEGMENT");
+      break;
+    case DATA_SEGMENT:
+      sprint("type: DATA SEGMENT");
+      break;
+    case STACK_SEGMENT:
+      sprint("type: STACK SEGMENT");
+      break;
+    case CONTEXT_SEGMENT:
+      sprint("type: TRAPFRAME SEGMENT");
+      break;
+    case SYSTEM_SEGMENT:
+      sprint("type: USER KERNEL STACK SEGMENT");
+      break;
     }
-    sprint( ", mapped to pa:%lx\n", lookup_pa(proc->pagetable, proc->mapped_info[i].va) );
+    sprint(", mapped to pa:%lx\n", lookup_pa(proc->pagetable, proc->mapped_info[i].va));
   }
 }

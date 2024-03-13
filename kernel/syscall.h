@@ -23,16 +23,15 @@
 #define SYS_user_free (SYS_user_base + 9)
 
 // added @lab3_c2
-#define SYS_user_sem_new (SYS_user_base+10)
-#define SYS_user_sem_P (SYS_user_base+11)
-#define SYS_user_sem_V (SYS_user_base+12)
+#define SYS_user_sem_new (SYS_user_base + 10)
+#define SYS_user_sem_P (SYS_user_base + 11)
+#define SYS_user_sem_V (SYS_user_base + 12)
 
 // added @lab3_c3
 #define SYS_user_printpa (SYS_user_base + 14)
 
 // added @challengex
 #define SYS_user_scanf (SYS_user_base + 15)
-
 
 // added @lab4_1
 #define SYS_user_open (SYS_user_base + 17)
@@ -43,18 +42,18 @@
 #define SYS_user_disk_stat (SYS_user_base + 22)
 #define SYS_user_close (SYS_user_base + 23)
 // added @lab4_2
-#define SYS_user_opendir  (SYS_user_base + 24)
-#define SYS_user_readdir  (SYS_user_base + 25)
-#define SYS_user_mkdir    (SYS_user_base + 26)
+#define SYS_user_opendir (SYS_user_base + 24)
+#define SYS_user_readdir (SYS_user_base + 25)
+#define SYS_user_mkdir (SYS_user_base + 26)
 #define SYS_user_closedir (SYS_user_base + 27)
 // added @lab4_3
-#define SYS_user_link   (SYS_user_base + 28)
+#define SYS_user_link (SYS_user_base + 28)
 #define SYS_user_unlink (SYS_user_base + 29)
 // added @lab4_c2
-#define SYS_user_exec  (SYS_user_base + 30)
+#define SYS_user_exec (SYS_user_base + 30)
 // added @lab4_challenge 1
-#define SYS_user_rcwd   (SYS_user_base + 31)
-#define SYS_user_ccwd   (SYS_user_base + 32)
+#define SYS_user_rcwd (SYS_user_base + 31)
+#define SYS_user_ccwd (SYS_user_base + 32)
 
 long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, long a7);
 

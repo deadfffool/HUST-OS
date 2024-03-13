@@ -2,7 +2,8 @@
 #include "util/string.h"
 #include "util/types.h"
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   int fd;
   char str[] = "hello world";
   char *filename = argv[0];

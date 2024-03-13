@@ -1,7 +1,7 @@
 /*
- * Utility functions for process management. 
+ * Utility functions for process management.
  *
- * Note: in Lab1, only one process (i.e., our user application) exists. Therefore, 
+ * Note: in Lab1, only one process (i.e., our user application) exists. Therefore,
  * PKE OS at this stage will set "current" to the loaded user application, and also
  * switch to the old "current" process after trap handling.
  */
@@ -22,7 +22,7 @@
 #include "util/string.h"
 #include "util/functions.h"
 
-//Two functions defined in kernel/usertrap.S
+// Two functions defined in kernel/usertrap.S
 extern char smode_trap_vector[];
 extern void return_to_user(trapframe *, uint64 satp);
 
@@ -37,14 +37,15 @@ process temp;
 spinlock procs_lock;
 
 // current points to the currently running user-mode application.
-process* current[NCPU];
+process *current[NCPU];
 
-int cur=0;
+int cur = 0;
 semphore signal[SEM_MAX];
 //
 // switch to a user-mode process
 //
-void switch_to(process* proc) {
+void switch_to(process *proc)
+{
   assert(proc);
   current[mycpu()] = proc;
   // write the smode_trap_vector (64-bit func. address) defined in kernel/strap_vector.S
@@ -54,16 +55,16 @@ void switch_to(process* proc) {
 
   // set up trapframe values (in process structure) that smode_trap_vector will need when
   // the process next re-enters the kernel.
-  proc->trapframe->kernel_sp = proc->kstack;      // process's kernel stack
-  proc->trapframe->kernel_satp = read_csr(satp);  // kernel page table
+  proc->trapframe->kernel_sp = proc->kstack;     // process's kernel stack
+  proc->trapframe->kernel_satp = read_csr(satp); // kernel page table
   proc->trapframe->kernel_trap = (uint64)smode_trap_handler;
   proc->trapframe->regs.tp = mycpu();
 
   // SSTATUS_SPP and SSTATUS_SPIE are defined in kernel/riscv.h
   // set S Previous Privilege mode (the SSTATUS_SPP bit in sstatus register) to User mode.
   unsigned long x = read_csr(sstatus);
-  x &= ~SSTATUS_SPP;  // clear SPP to 0 for user mode
-  x |= SSTATUS_SPIE;  // enable interrupts in user mode
+  x &= ~SSTATUS_SPP; // clear SPP to 0 for user mode
+  x |= SSTATUS_SPIE; // enable interrupts in user mode
 
   // write x back to 'sstatus' register to enable interrupts, and sret destination mode.
   write_csr(sstatus, x);
@@ -82,10 +83,12 @@ void switch_to(process* proc) {
 //
 // initialize process pool (the procs[] array). added @lab3_1
 //
-void init_proc_pool() {
-  memset( procs, 0, sizeof(process)*NPROC );
+void init_proc_pool()
+{
+  memset(procs, 0, sizeof(process) * NPROC);
 
-  for (int i = 0; i < NPROC; ++i) {
+  for (int i = 0; i < NPROC; ++i)
+  {
     procs[i].status = FREE;
     procs[i].pid = i;
   }
@@ -172,11 +175,11 @@ process *alloc_process()
   return &procs[i];
 }
 
-
 //
 // reclaim a process. added @lab3_1
 //
-int free_process( process* proc ) {
+int free_process(process *proc)
+{
   // we set the status to ZOMBIE, but cannot destruct its vm space immediately.
   // since proc can be current process, and its user kernel stack is currently in use!
   // but for proxy kernel, it (memory leaking) may NOT be a really serious issue,
@@ -249,36 +252,38 @@ int do_fork(process *parent)
       memcpy((void *)&child->user_heap, (void *)&parent->user_heap, sizeof(parent->user_heap));
       break;
     case CODE_SEGMENT:
-      {
-        uint64 va = parent->mapped_info[i].va, size = parent->mapped_info[i].npages * PGSIZE, pa = lookup_pa(parent->pagetable, parent->mapped_info[i].va);
-        int perm = prot_to_type(PROT_EXEC | PROT_READ, 1);
-        map_pages(child->pagetable, va, size, pa, perm);
+    {
+      uint64 va = parent->mapped_info[i].va, size = parent->mapped_info[i].npages * PGSIZE, pa = lookup_pa(parent->pagetable, parent->mapped_info[i].va);
+      int perm = prot_to_type(PROT_EXEC | PROT_READ, 1);
+      map_pages(child->pagetable, va, size, pa, perm);
 
-        // after mapping, register the vm region (do not delete codes below!)
-        child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
-        child->mapped_info[child->total_mapped_region].npages =
-            parent->mapped_info[i].npages;
-        child->mapped_info[child->total_mapped_region].seg_type = CODE_SEGMENT;
-        child->total_mapped_region++;
-        break;
-      }
-    case DATA_SEGMENT:
-        {
-          for( int j=0; j<parent->mapped_info[i].npages; j++ ){
-            uint64 addr = lookup_pa(parent->pagetable, parent->mapped_info[i].va+j*PGSIZE);
-            char *newaddr = alloc_page(); memcpy(newaddr, (void *)addr, PGSIZE);
-            map_pages(child->pagetable, parent->mapped_info[i].va+j*PGSIZE, PGSIZE,
-                    (uint64)newaddr, prot_to_type(PROT_WRITE | PROT_READ, 1));
-        }
-
-        // after mapping, register the vm region (do not delete codes below!)
-        child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
-        child->mapped_info[child->total_mapped_region].npages = 
+      // after mapping, register the vm region (do not delete codes below!)
+      child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
+      child->mapped_info[child->total_mapped_region].npages =
           parent->mapped_info[i].npages;
-        child->mapped_info[child->total_mapped_region].seg_type = DATA_SEGMENT;
-        child->total_mapped_region++;
-        break;
-        }
+      child->mapped_info[child->total_mapped_region].seg_type = CODE_SEGMENT;
+      child->total_mapped_region++;
+      break;
+    }
+    case DATA_SEGMENT:
+    {
+      for (int j = 0; j < parent->mapped_info[i].npages; j++)
+      {
+        uint64 addr = lookup_pa(parent->pagetable, parent->mapped_info[i].va + j * PGSIZE);
+        char *newaddr = alloc_page();
+        memcpy(newaddr, (void *)addr, PGSIZE);
+        map_pages(child->pagetable, parent->mapped_info[i].va + j * PGSIZE, PGSIZE,
+                  (uint64)newaddr, prot_to_type(PROT_WRITE | PROT_READ, 1));
+      }
+
+      // after mapping, register the vm region (do not delete codes below!)
+      child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
+      child->mapped_info[child->total_mapped_region].npages =
+          parent->mapped_info[i].npages;
+      child->mapped_info[child->total_mapped_region].seg_type = DATA_SEGMENT;
+      child->total_mapped_region++;
+      break;
+    }
     }
   }
 
@@ -290,35 +295,36 @@ int do_fork(process *parent)
   return child->pid;
 }
 
-//add_@lab4_c2
-process* alloc_process_without_sprint() {
+// add_@lab4_c2
+process *alloc_process_without_sprint()
+{
   // locate the first usable process structure
   // init proc[i]'s vm space
-  temp.trapframe = (trapframe *)alloc_page();  //trapframe, used to save context
+  temp.trapframe = (trapframe *)alloc_page(); // trapframe, used to save context
   memset(temp.trapframe, 0, sizeof(trapframe));
 
   // page directory
   temp.pagetable = (pagetable_t)alloc_page();
   memset((void *)temp.pagetable, 0, PGSIZE);
 
-  temp.kstack = (uint64)alloc_page() + PGSIZE;   //user kernel stack top
-  uint64 user_stack = (uint64)alloc_page();       //phisical address of user stack bottom
-  temp.trapframe->regs.sp = USER_STACK_TOP;  //virtual address of user stack top
+  temp.kstack = (uint64)alloc_page() + PGSIZE; // user kernel stack top
+  uint64 user_stack = (uint64)alloc_page();    // phisical address of user stack bottom
+  temp.trapframe->regs.sp = USER_STACK_TOP;    // virtual address of user stack top
 
   // allocates a page to record memory regions (segments)
-  temp.mapped_info = (mapped_region*)alloc_page();
-  memset( temp.mapped_info, 0, PGSIZE );
+  temp.mapped_info = (mapped_region *)alloc_page();
+  memset(temp.mapped_info, 0, PGSIZE);
 
   // map user stack in userspace
   user_vm_map((pagetable_t)temp.pagetable, USER_STACK_TOP - PGSIZE, PGSIZE,
-    user_stack, prot_to_type(PROT_WRITE | PROT_READ, 1));
+              user_stack, prot_to_type(PROT_WRITE | PROT_READ, 1));
   temp.mapped_info[STACK_SEGMENT].va = USER_STACK_TOP - PGSIZE;
   temp.mapped_info[STACK_SEGMENT].npages = 1;
   temp.mapped_info[STACK_SEGMENT].seg_type = STACK_SEGMENT;
 
   // map trapframe in user space (direct mapping as in kernel space).
   user_vm_map((pagetable_t)temp.pagetable, (uint64)temp.trapframe, PGSIZE,
-    (uint64)temp.trapframe, prot_to_type(PROT_WRITE | PROT_READ, 0));
+              (uint64)temp.trapframe, prot_to_type(PROT_WRITE | PROT_READ, 0));
   temp.mapped_info[CONTEXT_SEGMENT].va = (uint64)temp.trapframe;
   temp.mapped_info[CONTEXT_SEGMENT].npages = 1;
   temp.mapped_info[CONTEXT_SEGMENT].seg_type = CONTEXT_SEGMENT;
@@ -326,7 +332,7 @@ process* alloc_process_without_sprint() {
   // map S-mode trap vector section in user space (direct mapping as in kernel space)
   // we assume that the size of usertrap.S is smaller than a page.
   user_vm_map((pagetable_t)temp.pagetable, (uint64)trap_sec_start, PGSIZE,
-    (uint64)trap_sec_start, prot_to_type(PROT_READ | PROT_EXEC, 0));
+              (uint64)trap_sec_start, prot_to_type(PROT_READ | PROT_EXEC, 0));
   temp.mapped_info[SYSTEM_SEGMENT].va = (uint64)trap_sec_start;
   temp.mapped_info[SYSTEM_SEGMENT].npages = 1;
   temp.mapped_info[SYSTEM_SEGMENT].seg_type = SYSTEM_SEGMENT;
@@ -338,7 +344,7 @@ process* alloc_process_without_sprint() {
 
   // map user heap in userspace
   temp.mapped_info[HEAP_SEGMENT].va = USER_FREE_ADDRESS_START;
-  temp.mapped_info[HEAP_SEGMENT].npages = 0;  // no pages are mapped to heap yet.
+  temp.mapped_info[HEAP_SEGMENT].npages = 0; // no pages are mapped to heap yet.
   temp.mapped_info[HEAP_SEGMENT].seg_type = HEAP_SEGMENT;
 
   temp.total_mapped_region = 4;
@@ -349,13 +355,13 @@ process* alloc_process_without_sprint() {
   return &temp;
 }
 
-//add_@lab4_c2
-void do_exec(char * filename,char * argv)
-{  
+// add_@lab4_c2
+void do_exec(char *filename, char *argv)
+{
   elf_info info;
-  process * p = alloc_process_without_sprint();
-  load_bincode_from_host_elf(p,filename);
-  
+  process *p = alloc_process_without_sprint();
+  load_bincode_from_host_elf(p, filename);
+
   current[mycpu()]->kstack = p->kstack;
   current[mycpu()]->pagetable = p->pagetable;
   current[mycpu()]->trapframe = p->trapframe;
@@ -366,24 +372,25 @@ void do_exec(char * filename,char * argv)
   current[mycpu()]->queue_next = p->queue_next;
   current[mycpu()]->tick_count = p->tick_count;
   current[mycpu()]->pfiles = p->pfiles;
-  
+
   // better malloc
-  void * pa = alloc_page();
+  void *pa = alloc_page();
   uint64 va = current[mycpu()]->user_heap.heap_top;
   current[mycpu()]->user_heap.heap_top += PGSIZE;
   current[mycpu()]->mapped_info[HEAP_SEGMENT].npages++;
-  user_vm_map((pagetable_t)current[mycpu()]->pagetable, va, PGSIZE, (uint64)pa,prot_to_type(PROT_WRITE | PROT_READ, 1));
-  current[mycpu()]->master = (block*)pa;
-  memset(pa,0,PGSIZE);
-  
+  user_vm_map((pagetable_t)current[mycpu()]->pagetable, va, PGSIZE, (uint64)pa, prot_to_type(PROT_WRITE | PROT_READ, 1));
+  current[mycpu()]->master = (block *)pa;
+  memset(pa, 0, PGSIZE);
+
   // args
-  size_t * vsp, * sp;
+  size_t *vsp, *sp;
   vsp = (size_t *)current[mycpu()]->trapframe->regs.sp;
   vsp -= 8;
-  sp = (size_t *)user_va_to_pa(current[mycpu()]->pagetable, (void*)vsp);
-  memcpy((char *)sp, argv, 1+strlen(argv));
-  vsp--;sp--;
-  * sp = (uint64)(1+vsp);
+  sp = (size_t *)user_va_to_pa(current[mycpu()]->pagetable, (void *)vsp);
+  memcpy((char *)sp, argv, 1 + strlen(argv));
+  vsp--;
+  sp--;
+  *sp = (uint64)(1 + vsp);
 
   current[mycpu()]->trapframe->regs.sp = (uint64)vsp;
   current[mycpu()]->trapframe->regs.a1 = (uint64)vsp;
@@ -398,12 +405,12 @@ ssize_t do_wait(uint64 pid)
   uint64 child_pid;
   if (pid == -1)
   {
-    //search
-    for(int i = 0;i<NPROC;i++)
+    // search
+    for (int i = 0; i < NPROC; i++)
     {
       if (procs[i].parent == current[mycpu()])
       {
-        flag = 1 ;
+        flag = 1;
         child_pid = procs[i].pid;
         if (procs[i].status == ZOMBIE)
         {
@@ -412,32 +419,34 @@ ssize_t do_wait(uint64 pid)
         }
       }
     }
-    // if it is running 
-    if(flag == 0) return -1;
-    else 
+    // if it is running
+    if (flag == 0)
+      return -1;
+    else
     {
-      current[mycpu()]->mark=child_pid;
+      current[mycpu()]->mark = child_pid;
       insert_to_blocked_queue(current[mycpu()]);
       schedule();
       return -2;
     }
   }
   else
-  {     
-    for(int i = 0;i<NPROC;i++)
+  {
+    for (int i = 0; i < NPROC; i++)
     {
       if (procs[i].pid == pid)
       {
         flag = 1;
         child_pid = procs[i].pid;
-        if (procs[pid].status == ZOMBIE) 
+        if (procs[pid].status == ZOMBIE)
         {
           procs[pid].status = FREE;
           return pid;
         }
       }
     }
-    if(flag == 0) return -1;
+    if (flag == 0)
+      return -1;
     else
     {
       current[mycpu()]->mark = child_pid;
@@ -448,74 +457,76 @@ ssize_t do_wait(uint64 pid)
   }
 }
 
-//0 stand for empty, 1 stand for free a block, 2 stand for assign a block, 3 stand for block merge
-block* findx(uint64 mark,uint64 size,uint64 va) 
+// 0 stand for empty, 1 stand for free a block, 2 stand for assign a block, 3 stand for block merge
+block *findx(uint64 mark, uint64 size, uint64 va)
 {
   int i;
-  switch(mark){
+  switch (mark)
+  {
   case 0:
   {
-    for(i=0;i<PGSIZE/sizeof(block)-1;i++)
-      if((current[mycpu()]->master+i)->mark == mark)
-        return current[mycpu()]->master+i;
+    for (i = 0; i < PGSIZE / sizeof(block) - 1; i++)
+      if ((current[mycpu()]->master + i)->mark == mark)
+        return current[mycpu()]->master + i;
     break;
   }
   case 1:
   {
-    for(i=0;i<PGSIZE/sizeof(block)-1;i++)
-      if((current[mycpu()]->master+i)->mark == mark && (current[mycpu()]->master+i)->va==va)
-        return current[mycpu()]->master+i;
-    return current[mycpu()]->master-1;
+    for (i = 0; i < PGSIZE / sizeof(block) - 1; i++)
+      if ((current[mycpu()]->master + i)->mark == mark && (current[mycpu()]->master + i)->va == va)
+        return current[mycpu()]->master + i;
+    return current[mycpu()]->master - 1;
     break;
   }
   case 2:
   {
-    for(i=0;i<PGSIZE/sizeof(block)-1;i++)
-      if((current[mycpu()]->master+i)->mark == mark && (current[mycpu()]->master+i)->size>=size)
-        return current[mycpu()]->master+i;
-    return current[mycpu()]->master-1;
+    for (i = 0; i < PGSIZE / sizeof(block) - 1; i++)
+      if ((current[mycpu()]->master + i)->mark == mark && (current[mycpu()]->master + i)->size >= size)
+        return current[mycpu()]->master + i;
+    return current[mycpu()]->master - 1;
     break;
   }
   case 3:
   {
-    for(i=0;i<PGSIZE/sizeof(block)-1;i++)
-      if((current[mycpu()]->master+i)->mark == 2 && (current[mycpu()]->master+i)->va==va+size)
-        return current[mycpu()]->master+i;
-    return current[mycpu()]->master-1;
+    for (i = 0; i < PGSIZE / sizeof(block) - 1; i++)
+      if ((current[mycpu()]->master + i)->mark == 2 && (current[mycpu()]->master + i)->va == va + size)
+        return current[mycpu()]->master + i;
+    return current[mycpu()]->master - 1;
     break;
-  }}
-  return current[mycpu()]->master-1;
+  }
+  }
+  return current[mycpu()]->master - 1;
 }
 
-block* alloc_block()
+block *alloc_block()
 {
-    void * pa = alloc_page();
-    uint64 va = current[mycpu()]->user_heap.heap_top;
-    current[mycpu()]->user_heap.heap_top += PGSIZE;
-    current[mycpu()]->mapped_info[HEAP_SEGMENT].npages++;
-    user_vm_map((pagetable_t)current[mycpu()]->pagetable, va, PGSIZE, (uint64)pa,prot_to_type(PROT_WRITE | PROT_READ, 1));
-    //place the block struct in master
-    block *b = findx(0,0,0);
-    
-    b->pa = (uint64)pa;
-    b->size = PGSIZE;
-    b->va = (uint64)va;
-    b->mark = 2;
-    return b;
+  void *pa = alloc_page();
+  uint64 va = current[mycpu()]->user_heap.heap_top;
+  current[mycpu()]->user_heap.heap_top += PGSIZE;
+  current[mycpu()]->mapped_info[HEAP_SEGMENT].npages++;
+  user_vm_map((pagetable_t)current[mycpu()]->pagetable, va, PGSIZE, (uint64)pa, prot_to_type(PROT_WRITE | PROT_READ, 1));
+  // place the block struct in master
+  block *b = findx(0, 0, 0);
+
+  b->pa = (uint64)pa;
+  b->size = PGSIZE;
+  b->va = (uint64)va;
+  b->mark = 2;
+  return b;
 }
 
 uint64 better_alloc(uint64 size)
 {
-  size = ROUNDUP(size,8);
+  size = ROUNDUP(size, 8);
 
-  uint64 size_of_block = ROUNDUP(sizeof(block),8);
-  block *b,*new_b; //b is the block we want to malloc
-  
-  b = findx(2,size,0);
-  if (b==current[mycpu()]->master-1) // not found
+  uint64 size_of_block = ROUNDUP(sizeof(block), 8);
+  block *b, *new_b; // b is the block we want to malloc
+
+  b = findx(2, size, 0);
+  if (b == current[mycpu()]->master - 1) // not found
     b = alloc_block();
-  
-  new_b = findx(0,0,0);
+
+  new_b = findx(0, 0, 0);
   new_b->pa = (uint64)(b->pa);
   new_b->size = size;
   new_b->va = (uint64)(b->va);
@@ -524,28 +535,28 @@ uint64 better_alloc(uint64 size)
   b->size -= size;
   b->va += size;
   b->pa += size;
-  sprint("malloc: %x\n",new_b->va);
+  sprint("malloc: %x\n", new_b->va);
   return new_b->va;
 }
 
-void  better_free(uint64 va)
+void better_free(uint64 va)
 {
-  block * b , *p;
-  b = findx(1,0,va);
-  if (b==current[mycpu()]->master-1) 
+  block *b, *p;
+  b = findx(1, 0, va);
+  if (b == current[mycpu()]->master - 1)
     panic("Nothing to free!");
   b->mark = 2;
-  //merge blocks
-  p = findx(3,b->size,va); 
-  if (p!=current[mycpu()]->master-1)
+  // merge blocks
+  p = findx(3, b->size, va);
+  if (p != current[mycpu()]->master - 1)
   {
     p->va -= b->size;
     p->pa -= b->size;
     p->size += b->size;
     b->mark = 0;
     return;
-  } 
-  //put it in first
+  }
+  // put it in first
   uint64 temp;
   temp = b->size;
   b->size = current[mycpu()]->master->size;
@@ -554,17 +565,16 @@ void  better_free(uint64 va)
   temp = b->pa;
   b->pa = current[mycpu()]->master->pa;
   current[mycpu()]->master->pa = temp;
-  
+
   temp = b->va;
   b->va = current[mycpu()]->master->va;
   current[mycpu()]->master->va = temp;
 }
 
-
-//PV operation function
+// PV operation function
 long do_sem_new(int resource)
 {
-  if(cur<SEM_MAX)
+  if (cur < SEM_MAX)
   {
     signal[cur].signal = resource;
     return cur++;
@@ -573,59 +583,65 @@ long do_sem_new(int resource)
   return -1;
 }
 
-//P operation
-void do_sem_P(int mutex){
-  if(mutex<0||mutex>=SEM_MAX)
+// P operation
+void do_sem_P(int mutex)
+{
+  if (mutex < 0 || mutex >= SEM_MAX)
   {
     panic("Your signal is error!\n");
     return;
   }
   signal[mutex].signal--;
-  if(signal[mutex].signal<0){
-    //insert current process to this signal's waiting list
+  if (signal[mutex].signal < 0)
+  {
+    // insert current process to this signal's waiting list
     insert_to_waiting_queue(mutex);
-    //schedule a ready process
+    // schedule a ready process
     schedule();
   }
-  
 }
 
-//V operation
-void do_sem_V(int mutex){
-  if(mutex<0||mutex>=SEM_MAX)
+// V operation
+void do_sem_V(int mutex)
+{
+  if (mutex < 0 || mutex >= SEM_MAX)
   {
     panic("Your signal is error!\n");
     return;
   }
   signal[mutex].signal++;
-  if(signal[mutex].signal<=0)
+  if (signal[mutex].signal <= 0)
   {
-    if(signal[mutex].waiting_queue!=NULL){
-      process* cur=signal[mutex].waiting_queue;
-      signal[mutex].waiting_queue=signal[mutex].waiting_queue->queue_next;
+    if (signal[mutex].waiting_queue != NULL)
+    {
+      process *cur = signal[mutex].waiting_queue;
+      signal[mutex].waiting_queue = signal[mutex].waiting_queue->queue_next;
       cur->status = READY;
       insert_to_ready_queue(cur);
     }
   }
-  
 }
 
-//P operation's insert
-void insert_to_waiting_queue(int mutex){
-  if(signal[mutex].waiting_queue==NULL)
+// P operation's insert
+void insert_to_waiting_queue(int mutex)
+{
+  if (signal[mutex].waiting_queue == NULL)
   {
     signal[mutex].waiting_queue = current[mycpu()];
   }
-  else{
-    process *cur=signal[mutex].waiting_queue;
-    for(;cur->queue_next!=NULL;cur=cur->queue_next)
+  else
+  {
+    process *cur = signal[mutex].waiting_queue;
+    for (; cur->queue_next != NULL; cur = cur->queue_next)
     {
-      if(cur==current[mycpu()]) return;
+      if (cur == current[mycpu()])
+        return;
     }
-    if(cur==current[mycpu()]) return;
-    cur->queue_next=current[mycpu()];
+    if (cur == current[mycpu()])
+      return;
+    cur->queue_next = current[mycpu()];
   }
-  
-  current[mycpu()]->queue_next=NULL;
-  current[mycpu()]->status=BLOCKED;
+
+  current[mycpu()]->queue_next = NULL;
+  current[mycpu()]->status = BLOCKED;
 }

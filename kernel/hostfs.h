@@ -20,14 +20,11 @@ int hostfs_write_back_vinode(struct vinode *vinode);
 int hostfs_update_vinode(struct vinode *vinode);
 
 // hostfs interface function declarations
-ssize_t hostfs_read(struct vinode *f_inode, char *r_buf, ssize_t len,
-                    int *offset);
-ssize_t hostfs_write(struct vinode *f_inode, const char *w_buf, ssize_t len,
-                     int *offset);
+ssize_t hostfs_read(struct vinode *f_inode, char *r_buf, ssize_t len, int *offset);
+ssize_t hostfs_write(struct vinode *f_inode, const char *w_buf, ssize_t len, int *offset);
 struct vinode *hostfs_lookup(struct vinode *parent, struct dentry *sub_dentry);
 struct vinode *hostfs_create(struct vinode *parent, struct dentry *sub_dentry);
-int hostfs_lseek(struct vinode *f_inode, ssize_t new_offset, int whence,
-                  int *offset);
+int hostfs_lseek(struct vinode *f_inode, ssize_t new_offset, int whence, int *offset);
 int hostfs_link(struct vinode *parent, struct dentry *sub_dentry, struct vinode *link_node);
 int hostfs_unlink(struct vinode *parent, struct dentry *sub_dentry, struct vinode *unlink_node);
 int hostfs_hook_open(struct vinode *f_inode, struct dentry *f_dentry);
