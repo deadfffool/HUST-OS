@@ -133,6 +133,6 @@ void m_start(uintptr_t hartid, uintptr_t dtb) {
 
   // switch to supervisor mode (S mode) and jump to s_start(), i.e., set pc to mepc
   write_tp(hartid);
-  sprint("In m_start, hartid:%d\n", hartid);
+  sprint("hartid = %d, Switch to kernel mode \n ", hartid);
   asm volatile("mret");
 }

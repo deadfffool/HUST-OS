@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) { //char **
     read_cwd(cwd);
     printu("miles@Chenxuan-MacBook %s $ ",cwd);
     scanfu("%s %s", command, para);
-    if(strcmp(command, "END") == 0 && strcmp(para, "END") == 0)
+    if(strcmp(command, "q") == 0)
       break;
     else if(strcmp("cd", command) == 0) // cd command
     {
