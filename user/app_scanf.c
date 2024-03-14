@@ -4,8 +4,9 @@
 int main(void)
 {
   char *string[128];
+  printu("please enter what you want to print: ");
   scanfu("%s", string);
-  printu("%s\n", string);
+  printu("user enter: %s\n", string);
   exit(0);
   return 0;
 }
