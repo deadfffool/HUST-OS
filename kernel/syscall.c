@@ -303,12 +303,22 @@ uint64 sys_user_exec(char *filename, char *para)
   return -1;
 }
 
-// added @lab1c1
 ssize_t sys_user_backtrace(uint64 n)
 {
-  int j;
-  for (j = count - 1; j > count - 2 - n; j--)
-    sprint("%s\n", symbols[j + 1].name);
+  for (int i = 0; i < count; i++)
+    sprint("0x%lx    %s\n", symbols[i].off, symbols[i].name);
+
+  uint64 ra = current[mycpu()]->trapframe->regs.sp + 40;
+  for (int i = 0; i < n; i++)
+  {
+    uint64 code = *(uint64 *)user_va_to_pa((pagetable_t)(current[mycpu()]->pagetable), (void *)ra);
+    for (int j = 0; j < count - 1; j++)
+    {
+      if (symbols[j + 1].off < code && code < symbols[j].off)
+        sprint("%s\n", symbols[j + 1].name);
+    }
+    ra += 16;
+  }
   return 0;
 }
 
