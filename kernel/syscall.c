@@ -305,9 +305,6 @@ uint64 sys_user_exec(char *filename, char *para)
 
 ssize_t sys_user_backtrace(uint64 n)
 {
-  for (int i = 0; i < count; i++)
-    sprint("0x%lx    %s\n", symbols[i].off, symbols[i].name);
-
   uint64 ra = current[mycpu()]->trapframe->regs.sp + 40;
   for (int i = 0; i < n; i++)
   {
