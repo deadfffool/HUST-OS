@@ -2,14 +2,71 @@
 #include "kernel/process.h"
 #include "spike_interface/spike_utils.h"
 #include "util/string.h"
+#include "string.h"
+
+static void print_error_line()
+{
+  uint64 epc=read_csr(mepc);
+  addr_line *cur_line=current[mycpu()]->line;
+  int i=0;
+  
+  //find errorline's instruction address
+  for(i=0,cur_line=current[mycpu()]->line;i<current[mycpu()]->line_ind&&cur_line->addr!=epc;++i,++cur_line)
+    if(cur_line->addr==epc)
+      break;
+
+  //find file's path and name
+  code_file *cur_file=current[mycpu()]->file+cur_line->file;
+  char *file_name=cur_file->file;
+  char *file_path=(current[mycpu()]->dir)[cur_file->dir];
+  //combine path and name
+  
+  sprint("Runtime error at %s/%s:%d\n", file_path, file_name, cur_line->line);
+
+  char filename[100];
+  int start=strlen(file_path);
+  strcpy(filename,file_path);
+  filename[start]='/';
+  start++;
+  strcpy(filename+start,file_name);
+
+  //find error line
+  //error instruction's line
+  int error_line=cur_line->line;
+  //open file
+  spike_file_t *file=spike_file_open(filename,O_RDONLY,0);
+  //get file's content
+  char code_file[1000];
+  spike_file_pread(file,(void*)code_file,sizeof(code_file),0);
+
+  //fine error line's start 
+  int it=0;
+  for(i=1;i<error_line;i++)
+  {
+    while(code_file[it]!='\n') it++;
+    it++;
+  }
+  char *errorline=code_file+it;
+  while(*errorline!='\n') errorline++;
+  *errorline='\0';
+
+  sprint("%s\n",code_file+it);
+  spike_file_close(file);
+}
 
 static void handle_instruction_access_fault() { panic("Instruction access fault!"); }
 
-static void handle_load_access_fault() { panic("Load access fault!"); }
+static void handle_load_access_fault() {
+  print_error_line();  
+  panic("Load access fault!"); 
+}
 
 static void handle_store_access_fault() { panic("Store/AMO access fault!"); }
 
-static void handle_illegal_instruction() { panic("Illegal instruction!"); }
+static void handle_illegal_instruction() { 
+  print_error_line();  
+  panic("Illegal instruction!"); 
+}
 
 static void handle_misaligned_load() { panic("Misaligned Load!"); }
 

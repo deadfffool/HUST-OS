@@ -372,6 +372,11 @@ void do_exec(char *filename, char *argv)
   current[mycpu()]->queue_next = p->queue_next;
   current[mycpu()]->tick_count = p->tick_count;
   current[mycpu()]->pfiles = p->pfiles;
+  //error line
+  current[mycpu()]->line = p->line;
+  current[mycpu()]->file = p->file;
+  current[mycpu()]->dir = p->dir;
+  current[mycpu()]->debugline = p->debugline;
 
   // better malloc
   void *pa = alloc_page();
